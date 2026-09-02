@@ -110,7 +110,20 @@
           <tbody>
             <template x-for="(track, index) in tracks" :key="track.name">
               <tr class="border-b border-gray-700/30 hover:bg-gray-700/20 transition-colors">
-                <td class="py-4 px-2 font-medium text-gray-200" x-text="track.name"></td>
+                <td class="py-4 px-2 font-medium text-gray-200">
+                  <div class="flex items-center gap-2">
+                    <span x-text="track.name"></span>
+                    <!-- Play Raw Button -->
+                    <button @click="togglePlay('raw', track)" class="text-gray-500 hover:text-cyan-400 focus:outline-none transition-colors" title="Play Original Suno Export">
+                      <template x-if="currentlyPlayingTrack === track.name + 'raw' && isPlaying">
+                        <svg class="w-4 h-4 text-cyan-400" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                      </template>
+                      <template x-if="currentlyPlayingTrack !== track.name + 'raw' || !isPlaying">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                      </template>
+                    </button>
+                  </div>
+                </td>
                 <td class="py-4 px-2">
                   <select x-model="track.preset" class="bg-[#111827] border border-gray-600 rounded p-1.5 text-sm text-gray-300 focus:outline-none focus:border-cyan-500 w-full max-w-[200px]">
                     <template x-for="[key, p] in Object.entries(presets)" :key="key">
@@ -143,9 +156,20 @@
                 <!-- Step 3: Master -->
                 <td class="py-4 px-2 text-center bg-emerald-900/5">
                   <template x-if="track.hasMastered">
-                    <span class="inline-flex items-center gap-1 text-emerald-400 text-xs font-bold uppercase tracking-wider bg-emerald-900/30 px-2 py-1 rounded">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Done
-                    </span>
+                    <div class="flex items-center justify-center gap-2">
+                      <span class="inline-flex items-center gap-1 text-emerald-400 text-xs font-bold uppercase tracking-wider bg-emerald-900/30 px-2 py-1 rounded">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Done
+                      </span>
+                      <!-- Play Mastered Button -->
+                      <button @click="togglePlay('master', track)" class="text-emerald-500 hover:text-emerald-300 focus:outline-none transition-colors" title="Play Mastered Version">
+                        <template x-if="currentlyPlayingTrack === track.name + 'master' && isPlaying">
+                          <svg class="w-4 h-4 text-emerald-300" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                        </template>
+                        <template x-if="currentlyPlayingTrack !== track.name + 'master' || !isPlaying">
+                          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        </template>
+                      </button>
+                    </div>
                   </template>
                   <template x-if="!track.hasMastered">
                     <button @click="runRowAction('master', track)" :disabled="loading || (!track.hasMixed && !track.hasSplit)" class="text-xs bg-gray-700 hover:bg-emerald-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-50 border border-emerald-500/30">Master</button>
@@ -199,6 +223,36 @@
         cpu: 0,
         gpu: 0,
         consoleLogs: [{type: 'system', msg: '> Moondiver DSP Engine ready.'}],
+        playingAudio: null,
+        currentlyPlayingTrack: null,
+        isPlaying: false,
+
+        togglePlay(type, track) {
+           const path = type === 'raw' ? track.fullPath : track.masteredFile;
+           if (!path) return;
+
+           const trackId = track.name + type;
+           if (this.currentlyPlayingTrack === trackId && this.playingAudio) {
+              if (this.playingAudio.paused) {
+                 this.playingAudio.play();
+                 this.isPlaying = true;
+              } else {
+                 this.playingAudio.pause();
+                 this.isPlaying = false;
+              }
+              return;
+           }
+           
+           if (this.playingAudio) {
+              this.playingAudio.pause();
+           }
+           
+           this.playingAudio = new Audio('/api/stream?path=' + encodeURIComponent(path));
+           this.playingAudio.onended = () => { this.isPlaying = false; };
+           this.playingAudio.play();
+           this.currentlyPlayingTrack = trackId;
+           this.isPlaying = true;
+        },
 
         async init() {
           try {

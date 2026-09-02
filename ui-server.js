@@ -37,10 +37,24 @@ app.post('/api/scan-folder', (req, res) => {
       const mixedFile = path.join(mixedStemsFolder, `${name}_Mixed.wav`);
       const hasMixed = fs.existsSync(mixedFile);
       
-      const masteredFolder = path.join(folderPath, 'mastered_versions', 'wav');
+      // Determine album root (one folder up if we are in suno_exports)
+      let albumRoot = folderPath;
+      if (albumRoot.endsWith('\\') || albumRoot.endsWith('/')) {
+        albumRoot = albumRoot.slice(0, -1);
+      }
+      if (albumRoot.toLowerCase().endsWith('suno_exports')) {
+        albumRoot = albumRoot.substring(0, Math.max(albumRoot.lastIndexOf('\\'), albumRoot.lastIndexOf('/')));
+      }
+
+      const masteredFolder = path.join(albumRoot, 'mastered_versions', 'wav');
       let hasMastered = false;
+      let masteredFile = null;
       if (fs.existsSync(masteredFolder)) {
-         hasMastered = fs.readdirSync(masteredFolder).some(f => f.includes(name));
+         const match = fs.readdirSync(masteredFolder).find(f => f.includes(name));
+         if (match) {
+            hasMastered = true;
+            masteredFile = path.join(masteredFolder, match);
+         }
       }
 
       return {
@@ -50,7 +64,8 @@ app.post('/api/scan-folder', (req, res) => {
         hasSplit,
         hasMixed,
         hasMastered,
-        mixedFile: hasMixed ? mixedFile : null
+        mixedFile: hasMixed ? mixedFile : null,
+        masteredFile
       };
     });
 
@@ -58,6 +73,24 @@ app.post('/api/scan-folder', (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// API: Stream Audio File for Playback
+app.get('/api/stream', (req, res) => {
+  const filePath = req.query.path;
+  if (!filePath || !fs.existsSync(filePath)) {
+    return res.status(404).send('Audio file not found');
+  }
+  
+  const stat = fs.statSync(filePath);
+  res.writeHead(200, {
+    'Content-Type': filePath.endsWith('.mp3') ? 'audio/mpeg' : 'audio/wav',
+    'Content-Length': stat.size,
+    'Accept-Ranges': 'bytes'
+  });
+  
+  const readStream = fs.createReadStream(filePath);
+  readStream.pipe(res);
 });
 
 // API: Split Stems using Demucs
