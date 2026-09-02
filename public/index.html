@@ -62,6 +62,10 @@
             <input type="text" x-model="targetPath" class="w-full bg-[#111827] border border-gray-600 rounded-lg py-3 pl-10 pr-3 text-cyan-300 font-mono text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-shadow" placeholder="E:\Music Projects\Frozen Time\suno_exports" @keydown.enter="scanFolder()">
           </div>
         </div>
+        <button @click="browseFolder()" :disabled="loading" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg shadow-md disabled:opacity-50 whitespace-nowrap flex items-center gap-2" title="Browse for folder">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+            Browse
+          </button>
         <button @click="scanFolder()" :disabled="loading" class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg disabled:opacity-50 whitespace-nowrap flex items-center gap-2">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
           Scan Folder
@@ -375,6 +379,19 @@
             const container = document.querySelector('.overflow-y-auto');
             container.scrollTop = container.scrollHeight;
           }, 50);
+        },
+
+        async browseFolder() {
+          try {
+            const res = await fetch('/api/browse-folder?start=' + encodeURIComponent(this.targetPath || 'E:\\Music Projects'));
+            const data = await res.json();
+            if (data.folder) {
+              this.targetPath = data.folder;
+              this.scanFolder();
+            }
+          } catch(e) {
+            this.log('Browse dialog failed: ' + e.message, 'error');
+          }
         },
 
         async scanFolder() {

@@ -85,6 +85,29 @@ app.post('/api/scan-folder', (req, res) => {
   }
 });
 
+// API: Browse for folder (native OS dialog via PowerShell)
+app.get('/api/browse-folder', (req, res) => {
+  const startDir = req.query.start || 'E:\\Music Projects';
+  const ps = spawn('powershell.exe', ['-NoProfile', '-Command', `
+    Add-Type -AssemblyName System.Windows.Forms
+    $dlg = New-Object System.Windows.Forms.FolderBrowserDialog
+    $dlg.Description = 'Select Album suno_exports Folder'
+    $dlg.SelectedPath = '${startDir.replace(/'/g, "''")}'
+    $dlg.ShowNewFolderButton = $false
+    if ($dlg.ShowDialog() -eq 'OK') { Write-Output $dlg.SelectedPath }
+  `]);
+  let result = '';
+  ps.stdout.on('data', d => result += d.toString());
+  ps.on('close', () => {
+    const folder = result.trim();
+    if (folder) {
+      res.json({ folder });
+    } else {
+      res.json({ folder: null });
+    }
+  });
+});
+
 // API: Stream Audio File for Playback
 app.get('/api/stream', (req, res) => {
   const filePath = req.query.path;
