@@ -11,6 +11,54 @@ const PORT = 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+const fs = require('fs');
+
+// API: Scan Folder for Audio Files and check their pipeline state
+app.post('/api/scan-folder', (req, res) => {
+  const { folderPath } = req.body;
+  if (!folderPath || !fs.existsSync(folderPath)) {
+    return res.status(400).json({ error: 'Valid folderPath is required' });
+  }
+
+  try {
+    const files = fs.readdirSync(folderPath);
+    const audioFiles = files.filter(f => f.toLowerCase().endsWith('.wav') || f.toLowerCase().endsWith('.flac') || f.toLowerCase().endsWith('.mp3'));
+    
+    const results = audioFiles.map(file => {
+      const parsed = path.parse(file);
+      const name = parsed.name;
+      const fullPath = path.join(folderPath, file);
+      
+      // Check states
+      const htdemucsFolder = path.join(folderPath, 'htdemucs_ft', name);
+      const mixedStemsFolder = path.join(htdemucsFolder, 'mixed_stems');
+      const hasSplit = fs.existsSync(htdemucsFolder) && fs.readdirSync(htdemucsFolder).filter(f => f.endsWith('.wav')).length >= 4;
+      
+      const mixedFile = path.join(mixedStemsFolder, `${name}_Mixed.wav`);
+      const hasMixed = fs.existsSync(mixedFile);
+      
+      const masteredFolder = path.join(folderPath, 'mastered_versions', 'wav');
+      let hasMastered = false;
+      if (fs.existsSync(masteredFolder)) {
+         hasMastered = fs.readdirSync(masteredFolder).some(f => f.includes(name));
+      }
+
+      return {
+        name,
+        fileName: file,
+        fullPath,
+        hasSplit,
+        hasMixed,
+        hasMastered,
+        mixedFile: hasMixed ? mixedFile : null
+      };
+    });
+
+    res.json({ folder: folderPath, tracks: results });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // API: Split Stems using Demucs
 app.post('/api/split', (req, res) => {
