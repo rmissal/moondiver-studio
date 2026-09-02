@@ -10,10 +10,16 @@ Erlaubt es, einzelne Audio-Dateien oder ganze Projektordner mit mageschneiderten
 
 Da wir tiefgreifende KI-Bibliotheken (PyTorch CUDA für die RTX GPU) verwenden, kann die **Windows 11 Smart App Control** die heruntergeladenen Dateien blockieren (aufgrund fehlender Microsoft-Signaturen).
 
-Um das Studio in 1 Minute lauffähig zu machen, führe einfach unser vorbereitetes Setup-Skript aus. Es installiert Node-Abhängigkeiten, Python 3.12 KI-Bibliotheken (ca. 2.5 GB) und maskiert diese automatisch vor der Smart App Control:
+Um das Studio in 1 Minute lauffähig zu machen, führe einfach das zu deinem System passende Setup-Skript aus. Es installiert Node-Abhängigkeiten und Python KI-Bibliotheken (ca. 2.5 GB) vollautomatisch.
 
+**Für Windows 11 (Bypasst die Smart App Control):**
 1. Rechtsklick auf `setup.ps1` -> **Mit PowerShell ausführen**
-2. App starten mit: `npm run ui` (Öffnet `localhost:3000`)
+
+**Für macOS / Linux:**
+1. Terminal öffnen und ausführen: `bash setup.sh`
+
+**Nach der Installation:**
+App starten mit: `npm run ui` (Öffnet `localhost:3000`)
 
 ---
 

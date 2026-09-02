@@ -17,12 +17,10 @@ app.post('/api/split', (req, res) => {
   const { targetFile } = req.body;
   if (!targetFile) return res.status(400).json({ error: 'targetFile is required' });
 
-  const demucsBin = 'C:\\Users\\katri\\AppData\\Local\\Python\\pythoncore-3.14-64\\Scripts\\demucs.exe';
   const outDir = path.dirname(targetFile);
 
-  const proc = spawn(demucsBin, ['-n', 'htdemucs_ft', '--two-stems', 'vocals', targetFile, '-o', outDir]); // Wait, better just split all 4 stems
-  // Actually, we want 4 stems, so:
-  const procFull = spawn(demucsBin, ['-n', 'htdemucs_ft', targetFile, '-o', outDir]);
+  // We use python3 explicitly so it works on Windows, macOS, and Linux
+  const procFull = spawn('python3', ['-m', 'demucs.separate', '-n', 'htdemucs_ft', targetFile, '-o', outDir]);
 
   let log = '';
   procFull.stderr.on('data', d => { log += d.toString() });
@@ -76,7 +74,16 @@ function getCpuUsage() {
 // API: System Stats
 app.get('/api/system-stats', (req, res) => {
   const usage = getCpuUsage();
-  res.json({ cpu: usage });
+  
+  const { exec } = require('child_process');
+  exec('nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits', (err, stdout) => {
+    let gpu = 0;
+    if (!err && stdout) {
+      gpu = parseInt(stdout.trim(), 10);
+      if (isNaN(gpu)) gpu = 0;
+    }
+    res.json({ cpu: usage, gpu });
+  });
 });
 
 // API: Get Presets
