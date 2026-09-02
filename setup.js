@@ -35,8 +35,8 @@ try {
   console.log("\x1b[90mDies kann je nach Internetverbindung einige Minuten dauern...\x1b[0m");
   
   if (isWin) {
-    // Windows: Install CUDA-accelerated PyTorch
-    execSync(`${pyCmd} -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124`, { stdio: 'inherit' });
+    // Windows: Install CUDA-accelerated PyTorch (Nightly cu128 for RTX 50-Series Support)
+    execSync(`${pyCmd} -m pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128 --upgrade`, { stdio: 'inherit' });
   } else {
     // Mac/Linux: Install Default PyTorch (MPS/CUDA)
     execSync(`${pyCmd} -m pip install torch torchvision torchaudio`, { stdio: 'inherit' });
