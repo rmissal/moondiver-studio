@@ -1,6 +1,19 @@
-# Audio Mastering MCP Server für Google Antigravity
+# Moondiver Studio & Audio Mastering MCP Server
 
-Ein nativer Model Context Protocol (MCP) Server für **Google Antigravity**, um einzelne Audio-Dateien oder ganze Projektordner mit maßgeschneiderten Studio-Mastering-Profilen (New Age, Ambient, Instrumental, Cinematic, Meditation, Pop etc.) automatisiert und verlustfrei zu mastern.
+Eine professionelle, Standalone Audio-Mastering-App mit lokalem Web-Dashboard (`localhost:3000`) und nativer Model Context Protocol (MCP) Integration fr **Google Antigravity**.
+
+Erlaubt es, einzelne Audio-Dateien oder ganze Projektordner mit mageschneiderten Studio-Mastering-Profilen (New Age, Ambient, Instrumental, Cinematic, Pop etc.) automatisiert zu mastern, sowie per KI (Demucs) Stems zu splitten.
+
+---
+
+## 🚀 Installation & Windows 11 Setup
+
+Da wir tiefgreifende KI-Bibliotheken (PyTorch CUDA für die RTX GPU) verwenden, kann die **Windows 11 Smart App Control** die heruntergeladenen Dateien blockieren (aufgrund fehlender Microsoft-Signaturen).
+
+Um das Studio in 1 Minute lauffähig zu machen, führe einfach unser vorbereitetes Setup-Skript aus. Es installiert Node-Abhängigkeiten, Python 3.12 KI-Bibliotheken (ca. 2.5 GB) und maskiert diese automatisch vor der Smart App Control:
+
+1. Rechtsklick auf `setup.ps1` -> **Mit PowerShell ausführen**
+2. App starten mit: `npm run ui` (Öffnet `localhost:3000`)
 
 ---
 
