@@ -71,78 +71,61 @@
 
     <!-- Batch Processing Table -->
     <div x-show="tracks.length > 0" class="bg-gray-800/60 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-700/50 mb-8 overflow-x-auto" style="display: none;">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-700/50 pb-4 gap-4">
-        <h2 class="text-xl font-semibold text-white flex items-center gap-2">
-          <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-          Album Tracks
-        </h2>
-        <!-- Global Actions Moved Above Table -->
-        <div class="flex flex-col sm:flex-row items-center gap-3">
-          <button @click="batchProcessMissing()" :disabled="loading" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 text-sm rounded-lg shadow-md transition disabled:opacity-50 flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-            Batch Process Missing Steps
-          </button>
-          <button @click="runGlobalSequence()" :disabled="loading || tracks.some(t => !t.hasMastered)" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2 px-4 text-sm rounded-lg shadow-lg transition disabled:opacity-30 flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
-            4. Sequence Album
-          </button>
-        </div>
-      </div>
+      <h2 class="text-xl font-semibold mb-6 text-white border-b border-gray-700/50 pb-3 flex items-center gap-2">
+        <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+        Album Tracks
+      </h2>
       
-      <table class="w-full text-left border-collapse">
-        <thead>
-          <tr>
-            <th colspan="3" class="border-b border-gray-700/80"></th>
-            <th colspan="3" class="px-2 pb-2 pt-2 border-b border-gray-700/80">
-              <div class="h-1.5 w-full bg-gradient-to-r from-purple-500 via-cyan-500 to-emerald-500 rounded-full opacity-80"></div>
-            </th>
-            <th colspan="2" class="border-b border-gray-700/80"></th>
-          </tr>
-          <tr class="text-gray-400 text-sm border-b border-gray-700/80">
-            <th class="py-3 px-2">Track Name</th>
-            <th class="py-3 px-1 text-center w-10" title="Play Original">▶ Raw</th>
-            <th class="py-3 px-2">DSP Profile</th>
-            <th class="py-3 px-2 text-center bg-purple-900/10">
-              <button @click="batchProcessColumn('split')" :disabled="loading" class="w-full flex flex-col items-center gap-1 hover:text-purple-400 transition-colors group">
-                <span class="text-purple-300">1. Split</span>
-                <span class="text-[10px] bg-gray-700 group-hover:bg-purple-600/50 text-white px-2 py-0.5 rounded shadow">All</span>
-              </button>
-            </th>
-            <th class="py-3 px-2 text-center bg-cyan-900/10">
-              <button @click="batchProcessColumn('mix')" :disabled="loading" class="w-full flex flex-col items-center gap-1 hover:text-cyan-400 transition-colors group">
-                <span class="text-cyan-300">2. Mix</span>
-                <span class="text-[10px] bg-gray-700 group-hover:bg-cyan-600/50 text-white px-2 py-0.5 rounded shadow">All</span>
-              </button>
-            </th>
-            <th class="py-3 px-2 text-center bg-emerald-900/10">
-              <button @click="batchProcessColumn('master')" :disabled="loading" class="w-full flex flex-col items-center gap-1 hover:text-emerald-400 transition-colors group">
-                <span class="text-emerald-300">3. Master</span>
-                <span class="text-[10px] bg-gray-700 group-hover:bg-emerald-600/50 text-white px-2 py-0.5 rounded shadow">All</span>
-              </button>
-            </th>
-            <th class="py-3 px-1 text-center w-10" title="Play Mastered">▶ Master</th>
-            <th class="py-3 px-3 text-left">Quality Report</th>
-          </tr>
-        </thead>
-        <tbody>
-          <template x-for="(track, index) in tracks" :key="track.name">
-              <tr class="border-b border-gray-700/30 hover:bg-gray-700/20 transition-colors" :class="track.isProcessing ? 'bg-gray-700/40 animate-pulse' : ''">
-                <!-- Track Name -->
-                <td class="py-4 px-2 font-medium text-gray-200" x-text="track.name"></td>
-                <!-- Play Raw Column -->
-                <td class="py-4 px-1 text-center">
-                  <button @click="togglePlay('raw', track)" class="w-8 h-8 rounded-full border-2 border-gray-600 hover:border-cyan-400 hover:bg-cyan-900/30 flex items-center justify-center transition-all mx-auto" title="Play Original">
-                    <template x-if="currentlyPlayingTrack === track.name + 'raw' && isPlaying">
-                      <svg class="w-4 h-4 text-cyan-400" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                    </template>
-                    <template x-if="currentlyPlayingTrack !== track.name + 'raw' || !isPlaying">
-                      <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    </template>
-                  </button>
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr>
+              <th colspan="2" class="border-b border-gray-700/80"></th>
+              <th colspan="3" class="px-2 pb-2 pt-2 border-b border-gray-700/80">
+                <div class="h-1.5 w-full bg-gradient-to-r from-purple-500 via-cyan-500 to-emerald-500 rounded-full opacity-80"></div>
+              </th>
+            </tr>
+            <tr class="text-gray-400 text-sm border-b border-gray-700/80">
+              <th class="py-3 px-2">Track Name</th>
+              <th class="py-3 px-2">Genre DSP Profile</th>
+              <th class="py-3 px-2 text-center bg-purple-900/10">
+                <button @click="batchProcessColumn('split')" :disabled="loading" class="w-full flex flex-col items-center gap-1 hover:text-purple-400 transition-colors group">
+                  <span class="text-purple-300">1. Demucs Split</span>
+                  <span class="text-[10px] bg-gray-700 group-hover:bg-purple-600/50 text-white px-2 py-0.5 rounded shadow">Split All</span>
+                </button>
+              </th>
+              <th class="py-3 px-2 text-center bg-cyan-900/10">
+                <button @click="batchProcessColumn('mix')" :disabled="loading" class="w-full flex flex-col items-center gap-1 hover:text-cyan-400 transition-colors group">
+                  <span class="text-cyan-300">2. Auto-Mix</span>
+                  <span class="text-[10px] bg-gray-700 group-hover:bg-cyan-600/50 text-white px-2 py-0.5 rounded shadow">Mix All</span>
+                </button>
+              </th>
+              <th class="py-3 px-2 text-center bg-emerald-900/10">
+                <button @click="batchProcessColumn('master')" :disabled="loading" class="w-full flex flex-col items-center gap-1 hover:text-emerald-400 transition-colors group">
+                  <span class="text-emerald-300">3. Final Master</span>
+                  <span class="text-[10px] bg-gray-700 group-hover:bg-emerald-600/50 text-white px-2 py-0.5 rounded shadow">Master All</span>
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="(track, index) in tracks" :key="track.name">
+              <tr class="border-b border-gray-700/30 hover:bg-gray-700/20 transition-colors">
+                <td class="py-4 px-2 font-medium text-gray-200">
+                  <div class="flex items-center gap-2">
+                    <span x-text="track.name"></span>
+                    <!-- Play Raw Button -->
+                    <button @click="togglePlay('raw', track)" class="text-gray-500 hover:text-cyan-400 focus:outline-none transition-colors" title="Play Original Suno Export">
+                      <template x-if="currentlyPlayingTrack === track.name + 'raw' && isPlaying">
+                        <svg class="w-4 h-4 text-cyan-400" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                      </template>
+                      <template x-if="currentlyPlayingTrack !== track.name + 'raw' || !isPlaying">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                      </template>
+                    </button>
+                  </div>
                 </td>
-                <!-- DSP Profile -->
                 <td class="py-4 px-2">
-                  <select x-model="track.preset" :disabled="track.isProcessing" class="bg-[#111827] border border-gray-600 rounded p-1.5 text-sm text-gray-300 focus:outline-none focus:border-cyan-500 w-full max-w-[150px]">
+                  <select x-model="track.preset" class="bg-[#111827] border border-gray-600 rounded p-1.5 text-sm text-gray-300 focus:outline-none focus:border-cyan-500 w-full max-w-[200px]">
                     <template x-for="[key, p] in Object.entries(presets)" :key="key">
                       <option :value="key" x-text="p.name" :selected="key === track.preset"></option>
                     </template>
@@ -150,42 +133,43 @@
                 </td>
                 <!-- Step 1: Split -->
                 <td class="py-4 px-2 text-center bg-purple-900/5">
-                  <template x-if="track.isProcessing === 'split'">
-                     <svg class="animate-spin h-5 w-5 text-purple-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  </template>
-                  <template x-if="!track.isProcessing && track.hasSplit">
+                  <template x-if="track.hasSplit">
                     <span class="inline-flex items-center gap-1 text-purple-400 text-xs font-bold uppercase tracking-wider bg-purple-900/30 px-2 py-1 rounded">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Done
                     </span>
                   </template>
-                  <template x-if="!track.isProcessing && !track.hasSplit">
+                  <template x-if="!track.hasSplit">
                     <button @click="runRowAction('split', track)" :disabled="loading" class="text-xs bg-gray-700 hover:bg-purple-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-50 border border-purple-500/30">Split</button>
                   </template>
                 </td>
                 <!-- Step 2: Mix -->
                 <td class="py-4 px-2 text-center bg-cyan-900/5">
-                  <template x-if="track.isProcessing === 'mix'">
-                     <svg class="animate-spin h-5 w-5 text-cyan-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  </template>
-                  <template x-if="!track.isProcessing && track.hasMixed">
+                  <template x-if="track.hasMixed">
                     <span class="inline-flex items-center gap-1 text-cyan-400 text-xs font-bold uppercase tracking-wider bg-cyan-900/30 px-2 py-1 rounded">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Done
                     </span>
                   </template>
-                  <template x-if="!track.isProcessing && !track.hasMixed">
+                  <template x-if="!track.hasMixed">
                     <button @click="runRowAction('mix', track)" :disabled="loading || !track.hasSplit" class="text-xs bg-gray-700 hover:bg-cyan-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-50 border border-cyan-500/30">Mix</button>
                   </template>
                 </td>
                 <!-- Step 3: Master -->
                 <td class="py-4 px-2 text-center bg-emerald-900/5">
-                  <template x-if="track.isProcessing === 'master'">
-                     <svg class="animate-spin h-5 w-5 text-emerald-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  </template>
-                  <template x-if="!track.isProcessing && track.hasMastered">
+                  <template x-if="track.hasMastered">
                     <div class="flex items-center justify-center gap-2">
                       <span class="inline-flex items-center gap-1 text-emerald-400 text-xs font-bold uppercase tracking-wider bg-emerald-900/30 px-2 py-1 rounded">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Done
                       </span>
+                      <!-- Play Mastered Button -->
+                      <button @click="togglePlay('master', track)" class="text-emerald-500 hover:text-emerald-300 focus:outline-none transition-colors" title="Play Mastered Version">
+                        <template x-if="currentlyPlayingTrack === track.name + 'master' && isPlaying">
+                          <svg class="w-4 h-4 text-emerald-300" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                        </template>
+                        <template x-if="currentlyPlayingTrack !== track.name + 'master' || !isPlaying">
+                          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        </template>
+                      </button>
+                      <!-- Info Button -->
                       <template x-if="track.masterStats">
                          <button @click="track.showStats = !track.showStats" class="text-emerald-500 hover:text-emerald-300 focus:outline-none transition-colors" title="View Master Report">
                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -193,60 +177,15 @@
                       </template>
                     </div>
                   </template>
-                  <template x-if="!track.isProcessing && !track.hasMastered">
+                  <template x-if="!track.hasMastered">
                     <button @click="runRowAction('master', track)" :disabled="loading || (!track.hasMixed && !track.hasSplit)" class="text-xs bg-gray-700 hover:bg-emerald-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-50 border border-emerald-500/30">Master</button>
                   </template>
-                </td>
-                <!-- Play Mastered Column -->
-                <td class="py-4 px-1 text-center">
-                  <template x-if="track.hasMastered">
-                    <button @click="togglePlay('master', track)" class="w-8 h-8 rounded-full border-2 border-emerald-700 hover:border-emerald-400 hover:bg-emerald-900/30 flex items-center justify-center transition-all mx-auto" title="Play Mastered">
-                      <template x-if="currentlyPlayingTrack === track.name + 'master' && isPlaying">
-                        <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                      </template>
-                      <template x-if="currentlyPlayingTrack !== track.name + 'master' || !isPlaying">
-                        <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                      </template>
-                    </button>
-                  </template>
-                </td>
-                <!-- Quality Report Column -->
-                <td class="py-4 px-3 text-xs border-l border-gray-700/30">
-                   <template x-if="track.masterStats">
-                      <div class="flex flex-col gap-1 w-max">
-                         <div class="flex items-center gap-2">
-                            <span class="text-gray-500 w-16">Profile:</span>
-                            <span class="text-amber-300 font-semibold" x-text="track.masterStats.autoDetectedGenre?.genreName || track.masterStats.autoDetectedGenre?.name || '—'"></span>
-                         </div>
-                         <div class="flex items-center gap-2">
-                            <span class="text-gray-500 w-16">Store:</span>
-                            <span class="font-bold flex items-center gap-1" :class="track.masterStats.kpi_vergleich.appleMusicConfidence === 'High' ? 'text-emerald-400' : 'text-yellow-400'">
-                              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                              <span x-text="track.masterStats.kpi_vergleich.appleMusicConfidence"></span>
-                            </span>
-                         </div>
-                         <div class="flex items-center gap-2">
-                            <span class="text-gray-500 w-16">LUFS:</span>
-                            <span class="text-gray-200 font-mono" x-text="track.masterStats.kpi_vergleich.lufs.after_target + ' LUFS'"></span>
-                         </div>
-                         <div class="flex items-center gap-2">
-                            <span class="text-gray-500 w-16">Peak:</span>
-                            <span class="text-gray-200 font-mono" x-text="track.masterStats.kpi_vergleich.truePeak.after_target + ' dBTP'"></span>
-                         </div>
-                      </div>
-                   </template>
-                   <template x-if="!track.masterStats && track.hasMastered">
-                      <span class="text-gray-500 italic">No report.</span>
-                   </template>
-                   <template x-if="!track.hasMastered">
-                      <span class="text-gray-600 italic">Pending...</span>
-                   </template>
                 </td>
               </tr>
               <!-- Stats Row -->
               <template x-if="track.showStats && track.masterStats">
                  <tr class="bg-gray-900/40 border-b border-gray-700/30">
-                    <td colspan="8" class="py-4 px-6 text-sm text-gray-300">
+                    <td colspan="5" class="py-4 px-6 text-sm text-gray-300">
                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div>
                              <h4 class="text-emerald-400 font-bold mb-2 uppercase text-xs tracking-wider">Before / After Comparison</h4>
@@ -277,25 +216,36 @@
                     </td>
                  </tr>
               </template>
-          </template>
-        </tbody>
-      </table>
-    </div>
+            </template>
+          </tbody>
+        </table>
 
-    <!-- Processing Loader -->
-    <div x-show="loading" class="mt-6 mb-4 flex items-center justify-center font-bold text-cyan-400 bg-cyan-900/20 border border-cyan-500/30 p-3 rounded-lg shadow-lg">
-      <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-      System is processing audio. Please wait...
+      <!-- Global Actions -->
+      <div class="mt-8 pt-6 border-t border-gray-700/50 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <button @click="batchProcessMissing()" :disabled="loading" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2.5 px-6 rounded-lg shadow-md transition disabled:opacity-50 flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+          Batch Process Missing Steps
+        </button>
+        
+        <button @click="runGlobalSequence()" :disabled="loading" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2.5 px-6 rounded-lg shadow-lg transition disabled:opacity-50 flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+          4. Sequence & Finalize Album
+        </button>
+      </div>
     </div>
 
     <!-- Status & Output Console -->
-    <div class="mt-4 bg-[#050810] rounded-2xl p-5 shadow-inner border border-gray-800/80 h-80 overflow-y-auto font-mono text-sm relative">
+    <div class="mt-8 bg-[#050810] rounded-2xl p-5 shadow-inner border border-gray-800/80 h-80 overflow-y-auto font-mono text-sm relative">
       <div class="absolute top-4 right-4 flex space-x-1">
         <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
         <div class="w-3 h-3 rounded-full bg-yellow-500/80"></div>
         <div class="w-3 h-3 rounded-full bg-green-500/80"></div>
       </div>
       
+      <div x-show="loading" class="text-cyan-400 mb-3 flex items-center font-bold">
+        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+        Processing audio... Please wait.
+      </div>
       <template x-for="(log, i) in consoleLogs" :key="i">
         <div class="mb-1.5 leading-relaxed" :class="log.type === 'error' ? 'text-red-400' : (log.type === 'success' ? 'text-emerald-400' : 'text-gray-300')" x-html="log.msg"></div>
       </template>
@@ -394,8 +344,7 @@
             this.tracks = data.tracks.map(t => ({
               ...t,
               preset: 'auto',
-              showStats: false,
-              isProcessing: null
+              showStats: false
             }));
             
             this.log(`Found ${this.tracks.length} tracks.`, 'success');
@@ -429,7 +378,6 @@
         },
 
         async runRowAction(action, track) {
-          track.isProcessing = action;
           let success = false;
           if (action === 'split') {
             success = await this.executeAction('/api/split', { targetFile: track.fullPath });
@@ -451,7 +399,6 @@
             
             success = await this.executeAction('/api/master', { targetPath: masterTarget, preset: track.preset, outputFolder: albumMasterFolder });
           }
-          track.isProcessing = null;
           
           if (success) {
             // Refresh the table states
