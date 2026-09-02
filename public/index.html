@@ -96,6 +96,7 @@
             <th colspan="3" class="px-2 pb-2 pt-2 border-b border-gray-700/80">
               <div class="h-1.5 w-full bg-gradient-to-r from-purple-500 via-cyan-500 to-emerald-500 rounded-full opacity-80"></div>
             </th>
+            <th class="border-b border-gray-700/80"></th>
           </tr>
           <tr class="text-gray-400 text-sm border-b border-gray-700/80">
             <th class="py-3 px-2">Track Name</th>
@@ -118,6 +119,7 @@
                 <span class="text-[10px] bg-gray-700 group-hover:bg-emerald-600/50 text-white px-2 py-0.5 rounded shadow">Master All</span>
               </button>
             </th>
+            <th class="py-3 px-3 text-left">Quality Report</th>
           </tr>
         </thead>
         <tbody>
@@ -201,11 +203,39 @@
                     <button @click="runRowAction('master', track)" :disabled="loading || (!track.hasMixed && !track.hasSplit)" class="text-xs bg-gray-700 hover:bg-emerald-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-50 border border-emerald-500/30">Master</button>
                   </template>
                 </td>
+                <!-- Quality Report Column -->
+                <td class="py-4 px-3 text-xs border-l border-gray-700/30">
+                   <template x-if="track.masterStats">
+                      <div class="flex flex-col gap-1 w-max">
+                         <div class="flex items-center gap-2">
+                            <span class="text-gray-500 w-16">Store:</span>
+                            <span class="font-bold flex items-center gap-1" :class="track.masterStats.kpi_vergleich.appleMusicConfidence === 'High' ? 'text-emerald-400' : 'text-yellow-400'">
+                              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                              <span x-text="track.masterStats.kpi_vergleich.appleMusicConfidence"></span>
+                            </span>
+                         </div>
+                         <div class="flex items-center gap-2">
+                            <span class="text-gray-500 w-16">LUFS:</span>
+                            <span class="text-gray-200 font-mono" x-text="track.masterStats.kpi_vergleich.lufs.after_target + ' LUFS'"></span>
+                         </div>
+                         <div class="flex items-center gap-2">
+                            <span class="text-gray-500 w-16">True Peak:</span>
+                            <span class="text-gray-200 font-mono" x-text="track.masterStats.kpi_vergleich.truePeak.after_target + ' dBTP'"></span>
+                         </div>
+                      </div>
+                   </template>
+                   <template x-if="!track.masterStats && track.hasMastered">
+                      <span class="text-gray-500 italic">No report saved.</span>
+                   </template>
+                   <template x-if="!track.hasMastered">
+                      <span class="text-gray-600 italic">Pending...</span>
+                   </template>
+                </td>
               </tr>
               <!-- Stats Row -->
               <template x-if="track.showStats && track.masterStats">
                  <tr class="bg-gray-900/40 border-b border-gray-700/30">
-                    <td colspan="5" class="py-4 px-6 text-sm text-gray-300">
+                    <td colspan="6" class="py-4 px-6 text-sm text-gray-300">
                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div>
                              <h4 class="text-emerald-400 font-bold mb-2 uppercase text-xs tracking-wider">Before / After Comparison</h4>
