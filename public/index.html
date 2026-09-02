@@ -81,9 +81,24 @@
           <tr class="text-gray-400 text-sm border-b border-gray-700/80">
             <th class="pb-3 px-2">Track Name</th>
             <th class="pb-3 px-2">Genre DSP Profile</th>
-            <th class="pb-3 px-2 text-center">1. Demucs Split</th>
-            <th class="pb-3 px-2 text-center">2. Auto-Mix</th>
-            <th class="pb-3 px-2 text-center">3. Final Master</th>
+            <th class="pb-3 px-2 text-center">
+              <button @click="batchProcessColumn('split')" :disabled="loading" class="w-full flex flex-col items-center gap-1 hover:text-purple-400 transition-colors group">
+                <span>1. Demucs Split</span>
+                <span class="text-[10px] bg-gray-700 group-hover:bg-purple-600/50 text-white px-2 py-0.5 rounded shadow">Split All</span>
+              </button>
+            </th>
+            <th class="pb-3 px-2 text-center">
+              <button @click="batchProcessColumn('mix')" :disabled="loading" class="w-full flex flex-col items-center gap-1 hover:text-cyan-400 transition-colors group">
+                <span>2. Auto-Mix</span>
+                <span class="text-[10px] bg-gray-700 group-hover:bg-cyan-600/50 text-white px-2 py-0.5 rounded shadow">Mix All</span>
+              </button>
+            </th>
+            <th class="pb-3 px-2 text-center">
+              <button @click="batchProcessColumn('master')" :disabled="loading" class="w-full flex flex-col items-center gap-1 hover:text-emerald-400 transition-colors group">
+                <span>3. Final Master</span>
+                <span class="text-[10px] bg-gray-700 group-hover:bg-emerald-600/50 text-white px-2 py-0.5 rounded shadow">Master All</span>
+              </button>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -271,8 +286,16 @@
           } else if (action === 'master') {
             // Master the mixed file if it exists, else the original
             const masterTarget = track.mixedFile ? track.mixedFile : track.fullPath;
-            // Force the output folder to be in the album root 'mastered_versions' instead of inside 'mixed_stems'
-            const albumMasterFolder = this.targetPath + '\\mastered_versions';
+            
+            // Fix: Put mastered files in the ALBUM root 'mastered_versions', not inside suno_exports
+            // Go one folder up from suno_exports
+            let albumRoot = this.targetPath;
+            if (albumRoot.endsWith('\\') || albumRoot.endsWith('/')) {
+              albumRoot = albumRoot.slice(0, -1);
+            }
+            albumRoot = albumRoot.substring(0, Math.max(albumRoot.lastIndexOf('\\'), albumRoot.lastIndexOf('/')));
+            const albumMasterFolder = albumRoot + '\\mastered_versions';
+            
             success = await this.executeAction('/api/master', { targetPath: masterTarget, preset: track.preset, outputFolder: albumMasterFolder });
           }
           
@@ -280,6 +303,24 @@
             // Refresh the table states
             await this.scanFolder();
           }
+        },
+
+        async batchProcessColumn(action) {
+          this.log(`Starting Batch Processing for column: ${action.toUpperCase()}`, 'info');
+          for (let i = 0; i < this.tracks.length; i++) {
+             const track = this.tracks[i];
+             if (action === 'split' && !track.hasSplit) {
+                this.log(`[Batch] Splitting ${track.name}...`);
+                await this.runRowAction('split', track);
+             } else if (action === 'mix' && !track.hasMixed && track.hasSplit) {
+                this.log(`[Batch] Mixing ${track.name}...`);
+                await this.runRowAction('mix', track);
+             } else if (action === 'master' && !track.hasMastered && (track.hasMixed || track.hasSplit)) {
+                this.log(`[Batch] Mastering ${track.name}...`);
+                await this.runRowAction('master', track);
+             }
+          }
+          this.log(`Batch Processing for ${action.toUpperCase()} Complete!`, 'success');
         },
 
         async batchProcessMissing() {
@@ -306,7 +347,16 @@
         async runGlobalSequence() {
           if (!this.targetPath) return;
           this.log('Starting Final Album Sequence...');
-          await this.executeAction('/api/sequence', { targetPath: this.targetPath, applyRenumbering: true });
+          
+          let albumRoot = this.targetPath;
+          if (albumRoot.endsWith('\\') || albumRoot.endsWith('/')) {
+            albumRoot = albumRoot.slice(0, -1);
+          }
+          if (albumRoot.toLowerCase().endsWith('suno_exports')) {
+            albumRoot = albumRoot.substring(0, Math.max(albumRoot.lastIndexOf('\\'), albumRoot.lastIndexOf('/')));
+          }
+          
+          await this.executeAction('/api/sequence', { targetPath: albumRoot, applyRenumbering: true });
         }
       }
     }
