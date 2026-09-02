@@ -49,11 +49,20 @@ app.post('/api/scan-folder', (req, res) => {
       const masteredFolder = path.join(albumRoot, 'mastered_versions', 'wav');
       let hasMastered = false;
       let masteredFile = null;
+      let masterStats = null;
       if (fs.existsSync(masteredFolder)) {
-         const match = fs.readdirSync(masteredFolder).find(f => f.includes(name));
+         const match = fs.readdirSync(masteredFolder).find(f => f.includes(name) && f.endsWith('.wav'));
          if (match) {
             hasMastered = true;
             masteredFile = path.join(masteredFolder, match);
+            
+            // Look for matching stats JSON
+            const jsonPath = masteredFile.replace(/\.wav$/i, '.json');
+            if (fs.existsSync(jsonPath)) {
+               try {
+                  masterStats = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+               } catch (e) {}
+            }
          }
       }
 
@@ -65,7 +74,8 @@ app.post('/api/scan-folder', (req, res) => {
         hasMixed,
         hasMastered,
         mixedFile: hasMixed ? mixedFile : null,
-        masteredFile
+        masteredFile,
+        masterStats
       };
     });
 

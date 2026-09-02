@@ -169,6 +169,12 @@
                           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                         </template>
                       </button>
+                      <!-- Info Button -->
+                      <template x-if="track.masterStats">
+                         <button @click="track.showStats = !track.showStats" class="text-emerald-500 hover:text-emerald-300 focus:outline-none transition-colors" title="View Master Report">
+                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                         </button>
+                      </template>
                     </div>
                   </template>
                   <template x-if="!track.hasMastered">
@@ -176,6 +182,40 @@
                   </template>
                 </td>
               </tr>
+              <!-- Stats Row -->
+              <template x-if="track.showStats && track.masterStats">
+                 <tr class="bg-gray-900/40 border-b border-gray-700/30">
+                    <td colspan="5" class="py-4 px-6 text-sm text-gray-300">
+                       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                             <h4 class="text-emerald-400 font-bold mb-2 uppercase text-xs tracking-wider">Before / After Comparison</h4>
+                             <div class="space-y-1 font-mono text-[11px]">
+                                <div class="flex justify-between border-b border-gray-800 pb-1">
+                                   <span class="text-gray-500">Loudness (LUFS)</span>
+                                   <span><span class="text-gray-400" x-text="track.masterStats.kpi_vergleich.lufs.before_measured"></span> <span class="text-emerald-500 font-bold ml-1">➔</span> <span class="text-white" x-text="track.masterStats.kpi_vergleich.lufs.after_target"></span></span>
+                                </div>
+                                <div class="flex justify-between border-b border-gray-800 pb-1">
+                                   <span class="text-gray-500">True Peak (dBTP)</span>
+                                   <span><span class="text-gray-400" x-text="track.masterStats.kpi_vergleich.truePeak.before_measured"></span> <span class="text-emerald-500 font-bold ml-1">➔</span> <span class="text-white" x-text="track.masterStats.kpi_vergleich.truePeak.after_target"></span></span>
+                                </div>
+                                <div class="flex justify-between border-b border-gray-800 pb-1">
+                                   <span class="text-gray-500">Apple Music Ready</span>
+                                   <span class="text-white font-bold" :class="track.masterStats.kpi_vergleich.appleMusicConfidence === 'High' ? 'text-emerald-400' : 'text-yellow-400'" x-text="track.masterStats.kpi_vergleich.appleMusicConfidence"></span>
+                                </div>
+                             </div>
+                          </div>
+                          <div>
+                             <h4 class="text-cyan-400 font-bold mb-2 uppercase text-xs tracking-wider">Applied Optimizations</h4>
+                             <ul class="list-disc list-inside space-y-1 text-[11px] text-gray-400">
+                                <template x-for="opt in track.masterStats.optimizations">
+                                   <li x-text="opt"></li>
+                                </template>
+                             </ul>
+                          </div>
+                       </div>
+                    </td>
+                 </tr>
+              </template>
             </template>
           </tbody>
         </table>
@@ -303,7 +343,8 @@
             // Map the API results to include a preset selector (defaulting to 'auto')
             this.tracks = data.tracks.map(t => ({
               ...t,
-              preset: 'auto'
+              preset: 'auto',
+              showStats: false
             }));
             
             this.log(`Found ${this.tracks.length} tracks.`, 'success');
