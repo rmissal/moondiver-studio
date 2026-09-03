@@ -1078,10 +1078,10 @@
             if (!res.ok) throw new Error(data.error || 'Server Error');
             this.log(`Success!`, 'success');
             this.log(data);
-            return true;
+            return data;
           } catch (e) {
             this.log(`Error: ${e.message}`, 'error');
-            return false;
+            return null;
           } finally {
             this.loading = false;
           }
@@ -1097,29 +1097,56 @@
           let success = false;
           try {
             if (action === 'analyze') {
-              success = await this.executeAction('/api/analyze', { targetFile: track.fullPath });
-              if (success) {
+              const res = await this.executeAction('/api/analyze', { targetFile: track.fullPath });
+              if (res) {
+                success = true;
+                track.hasAnalyzed = true;
+                track.rawAnalysis = res;
                 this.log(`Analyzed raw audio for ${track.name}`, 'success');
               }
             } else if (action === 'split') {
-              success = await this.executeAction('/api/split', { targetFile: track.fullPath });
+              const res = await this.executeAction('/api/split', { targetFile: track.fullPath });
+              if (res) {
+                success = true;
+                track.hasSplit = true;
+              }
             } else if (action === 'mix') {
-              success = await this.executeAction('/api/mix', { targetFolder: track.fullPath, preset: track.preset });
+              const res = await this.executeAction('/api/mix', { targetFolder: track.fullPath, preset: track.preset });
+              if (res) {
+                success = true;
+                track.hasMixed = true;
+                if (res.mixdownFile) track.mixedFile = res.mixdownFile;
+              }
             } else if (action === 'master') {
               const masterTarget = track.mixedFile ? track.mixedFile : track.fullPath;
-              success = await this.executeAction('/api/master', {
+              const res = await this.executeAction('/api/master', {
                 targetPath: masterTarget,
                 preset: track.preset,
                 outputFolder: this.outputFolder,
                 trackName: track.name
               });
+              if (res) {
+                success = true;
+                track.hasMastered = true;
+                if (res.processedTracks && res.processedTracks[0]) {
+                  const pt = res.processedTracks[0];
+                  track.masteredFile = pt.outputWav;
+                  track.masterStats = pt;
+                }
+              }
             } else if (action === 'report') {
-              success = await this.executeAction('/api/quality-report', {
-                masteredFile: track.masteredFile,
+              let targetMaster = track.masteredFile;
+              if (!targetMaster && this.outputFolder) {
+                targetMaster = `${this.outputFolder}\\wav\\${track.name.replace(/^\d+[\s_-]*/, '')}.wav`;
+              }
+              const res = await this.executeAction('/api/quality-report', {
+                masteredFile: targetMaster || track.name,
                 rawFile: track.fullPath,
                 outputFolder: this.outputFolder
               });
-              if (success) {
+              if (res) {
+                success = true;
+                track.masterStats = res;
                 this.log(`Quality Report generated & saved for ${track.name}`, 'success');
               }
             }
