@@ -3,10 +3,9 @@ import { buildFilterChain } from '../lib/dsp';
 import { PRESETS } from '../lib/presets';
 
 describe('DSP Filter Chain Builder Tests', () => {
-  
   it('Should build a valid PASS 1 loudness measurement string', () => {
     const pass1 = buildFilterChain({ preset: 'new_age_ambient' }, null, null);
-    
+
     // loudnorm print_format=json must be in the filter string for pass 1
     expect(pass1.filterString).toContain('loudnorm=');
     expect(pass1.filterString).toContain('print_format=json');
@@ -21,7 +20,7 @@ describe('DSP Filter Chain Builder Tests', () => {
       target_offset: 2.5
     };
     const pass2 = buildFilterChain({ preset: 'new_age_ambient' }, measured, 120);
-    
+
     // Should include linear true in pass 2 loudnorm
     expect(pass2.filterString).toContain('linear=true');
     expect(pass2.filterString).toContain('measured_I=-20');
@@ -34,7 +33,6 @@ describe('DSP Filter Chain Builder Tests', () => {
     const pass1Ambient = buildFilterChain({ preset: 'new_age_ambient' }, null, null);
     expect(pass1.filterString).toBe(pass1Ambient.filterString);
   });
-
 });
 
 describe('Presets Configuration Tests', () => {

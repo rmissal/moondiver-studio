@@ -7,7 +7,12 @@
     "start": "node index.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "ui": "node ui-server.js"
+    "ui": "node ui-server.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run lint && npm test"
   },
   "keywords": [
     "mcp",
@@ -22,7 +27,12 @@
     "express": "^5.2.1"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@vitest/coverage-v8": "^4.1.11",
+    "eslint": "^10.9.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.6",
     "vitest": "^4.1.11"
   }
 }

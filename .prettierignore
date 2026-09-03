@@ -1,0 +1,7 @@
+node_modules/
+coverage/
+ffmpeg/
+*.log
+*.m3u
+public/htdemucs_ft/
+package-lock.json

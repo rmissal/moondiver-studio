@@ -14,7 +14,8 @@ const { mixStems } = require('./lib/mixer');
 const TOOLS = [
   {
     name: 'mix_stems',
-    description: 'Automated stem mixing (pre-mastering). Reads vocals, bass, drums, and other stems from a folder, applies genre-aware EQ (e.g. mud removal) and balancing, and mixes them into a single auto_mixdown.wav.',
+    description:
+      'Automated stem mixing (pre-mastering). Reads vocals, bass, drums, and other stems from a folder, applies genre-aware EQ (e.g. mud removal) and balancing, and mixes them into a single auto_mixdown.wav.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -32,7 +33,8 @@ const TOOLS = [
   },
   {
     name: 'sequence_album',
-    description: 'Computes optimal album track sequence and dramatic tension arcs (cinematic_journey, classic_3_act, meditation_descent, energy_wave), renumbers WAV/MP3 files, embeds studio metadata, generates M3U playlists and TRACKLIST.md.',
+    description:
+      'Computes optimal album track sequence and dramatic tension arcs (cinematic_journey, classic_3_act, meditation_descent, energy_wave), renumbers WAV/MP3 files, embeds studio metadata, generates M3U playlists and TRACKLIST.md.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -47,7 +49,8 @@ const TOOLS = [
         },
         applyRenumbering: {
           type: 'boolean',
-          description: 'Whether to rename mastered WAV/MP3 files with track numbers "01 - ...", "02 - ..." (default: false).'
+          description:
+            'Whether to rename mastered WAV/MP3 files with track numbers "01 - ...", "02 - ..." (default: false).'
         },
         generatePlaylist: {
           type: 'boolean',
@@ -71,7 +74,8 @@ const TOOLS = [
   },
   {
     name: 'master_audio',
-    description: 'Performs Two-Pass Adaptive Linear Mastering with automatic acoustic genre classification, de-hiss, de-essing, analog tape warmth, stereo widening, anti-click micro fade-in, tail fade-out, studio metadata, and dual wav/ + mp3/ export.',
+    description:
+      'Performs Two-Pass Adaptive Linear Mastering with automatic acoustic genre classification, de-hiss, de-essing, analog tape warmth, stereo widening, anti-click micro fade-in, tail fade-out, studio metadata, and dual wav/ + mp3/ export.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -85,12 +89,23 @@ const TOOLS = [
         },
         preset: {
           type: 'string',
-          enum: ['auto', 'new_age_ambient', 'cinematic_orchestral', 'acoustic_instrumental', 'folk_acoustic', 'meditation_chillout', 'streaming_pop_standard', 'stadium_live_rock', 'custom'],
+          enum: [
+            'auto',
+            'new_age_ambient',
+            'cinematic_orchestral',
+            'acoustic_instrumental',
+            'folk_acoustic',
+            'meditation_chillout',
+            'streaming_pop_standard',
+            'stadium_live_rock',
+            'custom'
+          ],
           description: 'Mastering preset (default: "auto" for automatic acoustic classification).'
         },
         targetLufs: {
           type: 'number',
-          description: 'Integrated target loudness in LUFS (e.g. -16.0 for Apple Music / -14.0 for Spotify). Overrides preset.'
+          description:
+            'Integrated target loudness in LUFS (e.g. -16.0 for Apple Music / -14.0 for Spotify). Overrides preset.'
         },
         truePeak: {
           type: 'number',
@@ -139,7 +154,8 @@ const TOOLS = [
         },
         autoFadeOut: {
           type: 'boolean',
-          description: 'Apply smooth exponential reverb-tail fade-out to prevent abrupt track end truncation (default: true).'
+          description:
+            'Apply smooth exponential reverb-tail fade-out to prevent abrupt track end truncation (default: true).'
         },
         artist: {
           type: 'string',
@@ -155,7 +171,8 @@ const TOOLS = [
   },
   {
     name: 'analyze_audio',
-    description: 'Measure acoustic and technical metrics of an audio file or project folder (EBU R128 Integrated LUFS, True Peak dBTP, Loudness Range LRA, Sample Rate, Bit Depth, Apple Music Quality Confidence Score, Auto-Genre).',
+    description:
+      'Measure acoustic and technical metrics of an audio file or project folder (EBU R128 Integrated LUFS, True Peak dBTP, Loudness Range LRA, Sample Rate, Bit Depth, Apple Music Quality Confidence Score, Auto-Genre).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -169,7 +186,8 @@ const TOOLS = [
   },
   {
     name: 'upscale_cover_art',
-    description: 'Upscales album cover artwork in the target folder to Apple Music standards (3000x3000 JPG using high-quality Lanczos scaling). Automatically converts PNGs to JPGs.',
+    description:
+      'Upscales album cover artwork in the target folder to Apple Music standards (3000x3000 JPG using high-quality Lanczos scaling). Automatically converts PNGs to JPGs.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -183,7 +201,8 @@ const TOOLS = [
   },
   {
     name: 'list_mastering_presets',
-    description: 'Returns list and detailed DSP configuration of all available mastering presets (auto, new_age_ambient, cinematic_orchestral, acoustic_instrumental, meditation_chillout, streaming_pop_standard, custom).',
+    description:
+      'Returns list and detailed DSP configuration of all available mastering presets (auto, new_age_ambient, cinematic_orchestral, acoustic_instrumental, meditation_chillout, streaming_pop_standard, custom).',
     inputSchema: {
       type: 'object',
       properties: {}
@@ -221,15 +240,21 @@ async function handleToolCall(name, args) {
         results.push(a);
       }
       return {
-        content: [{
-          type: 'text',
-          text: JSON.stringify({
-            scope: isSingleFile ? 'single_file' : 'directory',
-            directory,
-            analyzedFilesCount: results.length,
-            results
-          }, null, 2)
-        }]
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(
+              {
+                scope: isSingleFile ? 'single_file' : 'directory',
+                directory,
+                analyzedFilesCount: results.length,
+                results
+              },
+              null,
+              2
+            )
+          }
+        ]
       };
     }
 
@@ -260,7 +285,7 @@ function sendJsonRpc(obj) {
 let buffer = '';
 process.stdin.setEncoding('utf8');
 
-process.stdin.on('data', async (chunk) => {
+process.stdin.on('data', async chunk => {
   buffer += chunk;
   const lines = buffer.split(/\r?\n/);
   buffer = lines.pop();
