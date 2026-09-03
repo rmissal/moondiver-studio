@@ -10,7 +10,8 @@
 <body class="bg-[#0b1120] text-gray-100 min-h-screen p-8 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] bg-fixed" x-data="studioApp()">
 
   <div class="max-w-7xl mx-auto relative z-10">
-    <header class="mb-8 flex flex-col md:flex-row items-center justify-between gap-6">
+    <!-- Header -->
+    <header class="mb-6 flex flex-col md:flex-row items-center justify-between gap-6">
       <div class="text-center md:text-left">
         <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 pb-1">
           Moondiver Mastering
@@ -41,66 +42,152 @@
       </div>
     </header>
 
-    <!-- Global Configuration Bar -->
-    <div class="bg-gray-800/60 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-700/50 mb-8">
-      <div class="flex flex-col md:flex-row items-end gap-4">
-        <!-- Quick Album Selector -->
-        <div class="w-full md:w-56">
-          <label class="block text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wider" title="Instantly switch between album folders in E:\Music Projects">
-            Quick Select Album
-          </label>
-          <select x-model="selectedAlbum" @change="onAlbumSelected()" class="w-full bg-[#111827] border border-gray-600 rounded-lg py-3 px-3 text-cyan-300 text-sm focus:outline-none focus:border-cyan-500 transition shadow" title="Choose a music project directory">
-            <option value="">-- Choose Project --</option>
-            <template x-for="alb in albumList" :key="alb.name">
-              <option :value="alb.path" x-text="alb.name"></option>
-            </template>
-          </select>
-        </div>
-
-        <!-- Folder Path Input -->
-        <div class="flex-1 w-full">
-          <label class="block text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wider" title="Filesystem path to the album's suno_exports directory">
-            Album suno_exports Path
-          </label>
-          <div class="relative">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-              </svg>
+    <!-- Split Input & Output Folder Control Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+      
+      <!-- LEFT CARD: Input Audio Source (Aligned over Track Name / Raw columns) -->
+      <div class="lg:col-span-5 bg-gray-800/70 backdrop-blur-md rounded-2xl p-5 shadow-2xl border border-cyan-500/40 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-3 border-b border-gray-700/60 pb-2">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+              <h3 class="text-sm font-bold uppercase tracking-wider text-cyan-300">1. Input Audio Source</h3>
             </div>
-            <input type="text" x-model="targetPath" class="w-full bg-[#111827] border border-gray-600 rounded-lg py-3 pl-10 pr-3 text-cyan-300 font-mono text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-shadow" placeholder="E:\Music Projects\Frozen Time\suno_exports" @keydown.enter="scanFolder()" title="Enter folder path and press Enter to scan">
+            <!-- Quick Album Dropdown -->
+            <select x-model="selectedAlbum" @change="onAlbumSelected()" class="bg-[#111827] border border-gray-600 rounded px-2 py-1 text-xs text-cyan-300 focus:outline-none focus:border-cyan-500" title="Quickly pick an album project from E:\Music Projects">
+              <option value="">Quick Pick Album...</option>
+              <template x-for="alb in albumList" :key="alb.name">
+                <option :value="alb.path" x-text="alb.name"></option>
+              </template>
+            </select>
+          </div>
+
+          <label class="block text-xs font-medium text-gray-400 mb-1.5" title="Directory containing original Suno exports (.wav)">
+            Input Path (suno_exports)
+          </label>
+          <div class="flex items-center gap-2">
+            <div class="relative flex-1">
+              <input type="text" x-model="targetPath" @keydown.enter="scanFolder()" class="w-full bg-[#111827] border border-gray-600 rounded-lg py-2 pl-3 pr-3 text-cyan-300 font-mono text-xs focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition shadow" placeholder="E:\Music Projects\Frozen Time\suno_exports" title="Path to raw suno_exports folder">
+            </div>
+            <button @click="browseFolder('input')" :disabled="loading" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-3 rounded-lg text-xs shadow transition flex items-center gap-1.5" title="Browse for input suno_exports directory">
+              <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+              Browse
+            </button>
+            <button @click="scanFolder()" :disabled="loading" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-3.5 rounded-lg text-xs shadow transition flex items-center gap-1.5" title="Scan directory for tracks">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              Scan
+            </button>
           </div>
         </div>
 
-        <!-- Browse Button -->
-        <button @click="browseFolder()" :disabled="loading" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg shadow-md disabled:opacity-50 whitespace-nowrap flex items-center gap-2 transition" title="Open native Windows Explorer dialog to select folder">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
-          Browse
-        </button>
-
-        <!-- Scan Folder Button -->
-        <button @click="scanFolder()" :disabled="loading" class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg disabled:opacity-50 whitespace-nowrap flex items-center gap-2 transition" title="Scan directory for tracks, stems, and mastering status">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-          Scan Folder
-        </button>
+        <div class="mt-3 pt-2.5 border-t border-gray-700/40 flex items-center justify-between text-[11px]">
+          <span class="text-gray-400">Status:</span>
+          <template x-if="tracks.length > 0">
+            <span class="text-cyan-300 font-medium flex items-center gap-1 font-mono">
+              <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+              <span x-text="`${tracks.length} raw tracks detected`"></span>
+            </span>
+          </template>
+          <template x-if="tracks.length === 0">
+            <span class="text-gray-500 italic">No tracks loaded</span>
+          </template>
+        </div>
       </div>
 
-      <!-- Version Control Bar -->
-      <div class="mt-4 pt-4 border-t border-gray-700/40 flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-gray-400 font-semibold uppercase tracking-wider">Master Version:</span>
-          <select x-model="currentVersion" @change="scanFolder()" class="bg-[#111827] border border-emerald-500/60 rounded px-2.5 py-1.5 text-emerald-300 font-mono text-xs focus:outline-none" title="Select which master version folder to view and write to">
-            <template x-for="ver in availableVersions" :key="ver">
-              <option :value="ver" x-text="ver"></option>
-            </template>
-          </select>
-          <button @click="createNewVersion()" :disabled="loading" class="bg-gray-700 hover:bg-emerald-700 text-gray-200 hover:text-white px-2.5 py-1.5 rounded text-xs transition flex items-center gap-1 border border-gray-600" title="Create a new version folder (e.g. mastered_versions_v1) to preserve previous masters">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            + New Version Folder
-          </button>
+      <!-- RIGHT CARD: Output Destination (Aligned over Split / Mix / Master / Report columns) -->
+      <div class="lg:col-span-7 bg-gray-800/70 backdrop-blur-md rounded-2xl p-5 shadow-2xl border border-emerald-500/40 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-3 border-b border-gray-700/60 pb-2 flex-wrap gap-2">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-300">2. Output Destination (Masters)</h3>
+            </div>
+            
+            <!-- Version Quick-Switch & New Version Button -->
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] text-gray-400">Version:</span>
+              <select x-model="currentVersion" @change="onVersionSelected()" class="bg-[#111827] border border-emerald-500/60 rounded px-2 py-1 text-xs text-emerald-300 font-mono focus:outline-none focus:border-emerald-400" title="Select which master version folder to store masters in">
+                <template x-for="ver in availableVersions" :key="ver">
+                  <option :value="ver" x-text="ver"></option>
+                </template>
+              </select>
+              <button @click="createNewVersion()" :disabled="loading" class="bg-gray-700 hover:bg-emerald-700 text-gray-200 hover:text-white px-2.5 py-1 rounded text-xs transition flex items-center gap-1 border border-gray-600" title="Create a new version folder (e.g. mastered_versions_v1) to keep previous masters safe">
+                <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                + New Version
+              </button>
+            </div>
+          </div>
+
+          <label class="block text-xs font-medium text-gray-400 mb-1.5" title="Destination folder where 24-bit WAV, MP3, and playlists will be saved">
+            Output Path (wav/ & mp3/ will be created here)
+          </label>
+          <div class="flex items-center gap-2">
+            <div class="relative flex-1">
+              <input type="text" x-model="outputFolder" @change="onOutputFolderManualChange()" class="w-full bg-[#111827] border border-gray-600 rounded-lg py-2 pl-3 pr-3 text-emerald-300 font-mono text-xs focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition shadow" placeholder="E:\Music Projects\Frozen Time\mastered_versions_v1" title="Destination path for finished studio masters">
+            </div>
+            <button @click="browseFolder('output')" :disabled="loading" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-3 rounded-lg text-xs shadow transition flex items-center gap-1.5" title="Browse for custom output folder">
+              <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+              Browse
+            </button>
+            <button @click="openExplorer(outputFolder)" :disabled="!outputFolder" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-3 rounded-lg text-xs shadow transition flex items-center gap-1.5" title="Open output folder in Windows Explorer">
+              <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+              Explorer
+            </button>
+          </div>
         </div>
-        <div class="text-gray-400 font-mono" x-show="albumRoot">
-          Album: <span class="text-emerald-400 font-bold" x-text="albumRoot"></span> / <span class="text-white font-bold" x-text="currentVersion"></span>
+
+        <div class="mt-3 pt-2.5 border-t border-gray-700/40 flex items-center justify-between text-[11px] flex-wrap gap-2">
+          <span class="text-gray-400">Content Status:</span>
+          <template x-if="existingOutputCount > 0">
+            <span class="text-amber-400 font-medium flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              <span x-text="`${existingOutputCount} existing master file(s) found`"></span>
+              <span class="text-gray-500 font-normal" x-text="acknowledgedFolders[outputFolder] ? '(Acknowledged)' : ''"></span>
+            </span>
+          </template>
+          <template x-if="existingOutputCount === 0">
+            <span class="text-emerald-400 font-medium flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+              Clean Folder (Ready for fresh masters)
+            </span>
+          </template>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Safety Warning / Acknowledge Modal -->
+    <div x-show="showWarningModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" style="display: none;">
+      <div class="bg-gray-900 border border-amber-500/60 rounded-2xl max-w-lg w-full p-6 shadow-2xl text-left transform transition-all">
+        <div class="flex items-center gap-3 text-amber-400 mb-4">
+          <div class="p-2 bg-amber-500/20 rounded-xl">
+            <svg class="w-7 h-7 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">Existing Files Detected in Output Folder</h3>
+            <p class="text-xs text-gray-400">Please confirm your target directory before mastering</p>
+          </div>
+        </div>
+
+        <p class="text-gray-300 text-sm mb-3">
+          The selected output destination already contains <span class="text-amber-400 font-bold" x-text="existingOutputCount"></span> audio master files:
+        </p>
+
+        <div class="bg-gray-950 p-3 rounded-lg border border-gray-800 font-mono text-xs text-amber-300 break-all mb-4" x-text="outputFolder"></div>
+
+        <p class="text-gray-400 text-xs mb-6 leading-relaxed">
+          Proceeding will write into this folder. If previous masters should remain untouched, click <span class="text-emerald-400 font-semibold">"Create New Version Folder"</span> to automatically create a clean version (e.g. <span class="font-mono text-gray-300">mastered_versions_v...</span>).
+        </p>
+
+        <div class="flex flex-col sm:flex-row justify-end gap-3">
+          <button @click="createNewVersion(); showWarningModal = false;" class="bg-gray-800 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg text-xs transition flex items-center justify-center gap-2 border border-gray-600 shadow">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Create New Version Instead
+          </button>
+          <button @click="acknowledgeWarning()" class="bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white font-bold py-2.5 px-5 rounded-lg text-xs transition shadow-lg flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            I Understand & Acknowledge
+          </button>
         </div>
       </div>
     </div>
@@ -113,16 +200,16 @@
             <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
             Album Tracks
           </h2>
-          <span class="text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded-full font-mono" x-text="`${tracks.length} tracks`"></span>
+          <span class="text-xs bg-gray-700 text-gray-300 px-2.5 py-0.5 rounded-full font-mono" x-text="`${tracks.length} tracks`"></span>
         </div>
 
         <!-- Global Actions Above Table -->
         <div class="flex flex-col sm:flex-row items-center gap-3">
-          <button @click="batchProcessMissing()" :disabled="loading" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 text-sm rounded-lg shadow-md transition disabled:opacity-50 flex items-center gap-2" title="Process all missing Split, Mix, and Master steps sequentially">
+          <button @click="batchProcessMissing()" :disabled="!isReadyToProcess()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 text-sm rounded-lg shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2" :title="isReadyToProcess() ? 'Process all missing Split, Mix, and Master steps sequentially' : 'Please specify both Input and Output folders before processing'">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
             Batch Process Missing Steps
           </button>
-          <button @click="runGlobalSequence()" :disabled="loading || tracks.some(t => !t.hasMastered)" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2 px-4 text-sm rounded-lg shadow-lg transition disabled:opacity-30 flex items-center gap-2" title="Sequence album into harmonic tension arc, tag studio metadata, and generate playlists">
+          <button @click="runGlobalSequence()" :disabled="!isReadyToProcess() || tracks.some(t => !t.hasMastered)" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2 px-4 text-sm rounded-lg shadow-lg transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2" :title="isReadyToProcess() ? (tracks.some(t => !t.hasMastered) ? 'All tracks must be mastered before sequencing' : 'Sequence album into dramatic arc, tag metadata, and generate playlists') : 'Please specify both Input and Output folders before sequencing'">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
             4. Sequence Album
           </button>
@@ -143,19 +230,19 @@
             <th class="py-3 px-1 text-center w-12" title="Listen to original raw Suno export">Raw</th>
             <th class="py-3 px-2" title="Target Acoustic Genre Profile">DSP Profile</th>
             <th class="py-3 px-2 text-center bg-purple-900/10">
-              <button @click="batchProcessColumn('split')" :disabled="loading" class="w-full flex flex-col items-center gap-1 hover:text-purple-400 transition-colors group" title="Step 1: Separate vocals, bass, drums, other stems using Demucs AI">
+              <button @click="batchProcessColumn('split')" :disabled="!isReadyToProcess()" class="w-full flex flex-col items-center gap-1 hover:text-purple-400 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed" title="Step 1: Separate vocals, bass, drums, other stems using Demucs AI">
                 <span class="text-purple-300">1. Split</span>
                 <span class="text-[10px] bg-gray-700 group-hover:bg-purple-600/50 text-white px-2 py-0.5 rounded shadow">All</span>
               </button>
             </th>
             <th class="py-3 px-2 text-center bg-cyan-900/10">
-              <button @click="batchProcessColumn('mix')" :disabled="loading" class="w-full flex flex-col items-center gap-1 hover:text-cyan-400 transition-colors group" title="Step 2: Auto-mix stems with analog warmth and de-mudding">
+              <button @click="batchProcessColumn('mix')" :disabled="!isReadyToProcess()" class="w-full flex flex-col items-center gap-1 hover:text-cyan-400 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed" title="Step 2: Auto-mix stems with analog warmth and de-mudding">
                 <span class="text-cyan-300">2. Mix</span>
                 <span class="text-[10px] bg-gray-700 group-hover:bg-cyan-600/50 text-white px-2 py-0.5 rounded shadow">All</span>
               </button>
             </th>
             <th class="py-3 px-2 text-center bg-emerald-900/10">
-              <button @click="batchProcessColumn('master')" :disabled="loading" class="w-full flex flex-col items-center gap-1 hover:text-emerald-400 transition-colors group" title="Step 3: Two-Pass Linear Mastering (EBU R128 -16 LUFS)">
+              <button @click="batchProcessColumn('master')" :disabled="!isReadyToProcess()" class="w-full flex flex-col items-center gap-1 hover:text-emerald-400 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed" title="Step 3: Two-Pass Linear Mastering (EBU R128 -16 LUFS)">
                 <span class="text-emerald-300">3. Master</span>
                 <span class="text-[10px] bg-gray-700 group-hover:bg-emerald-600/50 text-white px-2 py-0.5 rounded shadow">All</span>
               </button>
@@ -184,7 +271,7 @@
 
                 <!-- DSP Profile Selector -->
                 <td class="py-4 px-2">
-                  <select x-model="track.preset" :disabled="track.isProcessing" class="bg-[#111827] border border-gray-600 rounded p-1.5 text-sm text-gray-300 focus:outline-none focus:border-cyan-500 w-full max-w-[150px]" title="Choose genre profile for calibrated EQ curves and stereowidth">
+                  <select x-model="track.preset" :disabled="track.isProcessing || !isReadyToProcess()" class="bg-[#111827] border border-gray-600 rounded p-1.5 text-sm text-gray-300 focus:outline-none focus:border-cyan-500 w-full max-w-[150px] disabled:opacity-50" title="Choose genre profile for calibrated EQ curves and stereowidth">
                     <template x-for="[key, p] in Object.entries(presets)" :key="key">
                       <option :value="key" x-text="p.name" :selected="key === track.preset"></option>
                     </template>
@@ -202,7 +289,7 @@
                     </span>
                   </template>
                   <template x-if="!track.isProcessing && !track.hasSplit">
-                    <button @click="runRowAction('split', track)" :disabled="loading" class="text-xs bg-gray-700 hover:bg-purple-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-50 border border-purple-500/30" title="Separate stems with Demucs">Split</button>
+                    <button @click="runRowAction('split', track)" :disabled="!isReadyToProcess()" class="text-xs bg-gray-700 hover:bg-purple-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed border border-purple-500/30" title="Separate stems with Demucs">Split</button>
                   </template>
                 </td>
 
@@ -217,7 +304,7 @@
                     </span>
                   </template>
                   <template x-if="!track.isProcessing && !track.hasMixed">
-                    <button @click="runRowAction('mix', track)" :disabled="loading || !track.hasSplit" class="text-xs bg-gray-700 hover:bg-cyan-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-50 border border-cyan-500/30" title="Mix stems with DSP warm filter chain">Mix</button>
+                    <button @click="runRowAction('mix', track)" :disabled="!isReadyToProcess() || !track.hasSplit" class="text-xs bg-gray-700 hover:bg-cyan-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed border border-cyan-500/30" title="Mix stems with DSP warm filter chain">Mix</button>
                   </template>
                 </td>
 
@@ -239,7 +326,7 @@
                     </div>
                   </template>
                   <template x-if="!track.isProcessing && !track.hasMastered">
-                    <button @click="runRowAction('master', track)" :disabled="loading || (!track.hasMixed && !track.hasSplit)" class="text-xs bg-gray-700 hover:bg-emerald-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-50 border border-emerald-500/30" title="Execute Two-Pass Linear Mastering">Master</button>
+                    <button @click="runRowAction('master', track)" :disabled="!isReadyToProcess() || (!track.hasMixed && !track.hasSplit)" class="text-xs bg-gray-700 hover:bg-emerald-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed border border-emerald-500/30" title="Execute Two-Pass Linear Mastering into selected output folder">Master</button>
                   </template>
                 </td>
 
@@ -355,11 +442,15 @@
     function studioApp() {
       return {
         targetPath: 'E:\\Music Projects\\Frozen Time\\suno_exports',
+        outputFolder: 'E:\\Music Projects\\Frozen Time\\mastered_versions_v1',
         albumList: [],
         selectedAlbum: '',
         albumRoot: '',
-        availableVersions: ['mastered_versions'],
-        currentVersion: 'mastered_versions',
+        availableVersions: ['mastered_versions', 'mastered_versions_v1'],
+        currentVersion: 'mastered_versions_v1',
+        existingOutputCount: 0,
+        showWarningModal: false,
+        acknowledgedFolders: {},
         presets: {},
         tracks: [],
         loading: false,
@@ -369,6 +460,12 @@
         playingAudio: null,
         currentlyPlayingTrack: null,
         isPlaying: false,
+
+        isReadyToProcess() {
+          return !this.loading && 
+                 this.targetPath && this.targetPath.trim().length > 0 && 
+                 this.outputFolder && this.outputFolder.trim().length > 0;
+        },
 
         togglePlay(type, track) {
            const path = type === 'raw' ? track.fullPath : track.masteredFile;
@@ -426,9 +523,53 @@
         onAlbumSelected() {
           if (this.selectedAlbum) {
             this.targetPath = this.selectedAlbum;
-            this.currentVersion = 'mastered_versions';
+            // Derivate default output folder
+            let albumRoot = this.selectedAlbum;
+            if (albumRoot.endsWith('\\') || albumRoot.endsWith('/')) albumRoot = albumRoot.slice(0, -1);
+            if (albumRoot.toLowerCase().endsWith('suno_exports')) {
+              albumRoot = albumRoot.substring(0, Math.max(albumRoot.lastIndexOf('\\'), albumRoot.lastIndexOf('/')));
+            }
+            this.albumRoot = albumRoot;
+            this.outputFolder = albumRoot + '\\' + this.currentVersion;
             this.scanFolder();
           }
+        },
+
+        onVersionSelected() {
+          if (this.albumRoot) {
+            this.outputFolder = this.albumRoot + '\\' + this.currentVersion;
+          }
+          this.scanFolder();
+        },
+
+        async onOutputFolderManualChange() {
+          if (this.outputFolder) {
+            await this.checkOutputFolder(this.outputFolder);
+            await this.scanFolder();
+          }
+        },
+
+        async checkOutputFolder(folder) {
+          try {
+            const res = await fetch('/api/check-output-folder', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ outputFolder: folder })
+            });
+            const data = await res.json();
+            this.existingOutputCount = data.count || 0;
+            if (this.existingOutputCount > 0 && !this.acknowledgedFolders[folder]) {
+              this.showWarningModal = true;
+            }
+          } catch(e) {}
+        },
+
+        acknowledgeWarning() {
+          if (this.outputFolder) {
+            this.acknowledgedFolders[this.outputFolder] = true;
+          }
+          this.showWarningModal = false;
+          this.log(`Output folder acknowledged: ${this.outputFolder}`, 'info');
         },
 
         log(msg, type='info') {
@@ -444,17 +585,35 @@
           }, 50);
         },
 
-        async browseFolder() {
+        async browseFolder(type = 'input') {
           try {
-            const res = await fetch('/api/browse-folder?start=' + encodeURIComponent(this.targetPath || 'E:\\Music Projects'));
+            const startPath = type === 'input' ? this.targetPath : (this.outputFolder || this.albumRoot);
+            const res = await fetch(`/api/browse-folder?type=${type}&start=` + encodeURIComponent(startPath || 'E:\\Music Projects'));
             const data = await res.json();
             if (data.folder) {
-              this.targetPath = data.folder;
-              this.scanFolder();
+              if (type === 'input') {
+                this.targetPath = data.folder;
+                await this.scanFolder();
+              } else {
+                this.outputFolder = data.folder;
+                await this.checkOutputFolder(this.outputFolder);
+                await this.scanFolder();
+              }
             }
           } catch(e) {
             this.log('Browse dialog failed: ' + e.message, 'error');
           }
+        },
+
+        async openExplorer(targetFolder) {
+          if (!targetFolder) return;
+          try {
+            await fetch('/api/open-explorer', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ targetFolder })
+            });
+          } catch(e) {}
         },
 
         async createNewVersion() {
@@ -470,6 +629,10 @@
             if (!res.ok) throw new Error(data.error);
             this.availableVersions = data.availableVersions;
             this.currentVersion = data.newVersion;
+            if (this.albumRoot) {
+              this.outputFolder = this.albumRoot + '\\' + this.currentVersion;
+            }
+            this.acknowledgedFolders[this.outputFolder] = true; // brand new folder is clean
             this.log(`Created new master version folder: ${data.newVersion}`, 'success');
             await this.scanFolder();
           } catch(e) {
@@ -482,12 +645,16 @@
         async scanFolder() {
           if (!this.targetPath) return;
           this.loading = true;
-          this.log(`Scanning folder: ${this.targetPath} (Version: ${this.currentVersion})`);
+          this.log(`Scanning input: ${this.targetPath} | Output: ${this.outputFolder || this.currentVersion}`);
           try {
             const res = await fetch('/api/scan-folder', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ folderPath: this.targetPath, targetVersion: this.currentVersion })
+              body: JSON.stringify({
+                folderPath: this.targetPath,
+                targetVersion: this.currentVersion,
+                outputFolder: this.outputFolder
+              })
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
@@ -495,6 +662,15 @@
             this.albumRoot = data.albumRoot;
             this.availableVersions = data.availableVersions || ['mastered_versions'];
             this.currentVersion = data.currentVersion || 'mastered_versions';
+            if (!this.outputFolder || !this.outputFolder.trim()) {
+              this.outputFolder = data.outputFolder;
+            }
+            this.existingOutputCount = data.existingOutputCount || 0;
+
+            // Trigger acknowledge warning modal once if existing files found and not yet acknowledged
+            if (this.existingOutputCount > 0 && !this.acknowledgedFolders[this.outputFolder]) {
+              this.showWarningModal = true;
+            }
 
             this.tracks = data.tracks.map(t => ({
               ...t,
@@ -503,7 +679,7 @@
               isProcessing: null
             }));
             
-            this.log(`Found ${this.tracks.length} tracks in ${data.currentVersion}.`, 'success');
+            this.log(`Found ${this.tracks.length} tracks. Master destination has ${this.existingOutputCount} files.`, 'success');
           } catch (e) {
             this.log(`Error scanning folder: ${e.message}`, 'error');
           } finally {
@@ -534,6 +710,11 @@
         },
 
         async runRowAction(action, track) {
+          if (!this.isReadyToProcess()) {
+            this.log('Both Input Folder and Output Folder must be specified before starting processing.', 'error');
+            return;
+          }
+
           track.isProcessing = action;
           let success = false;
           if (action === 'split') {
@@ -542,12 +723,11 @@
             success = await this.executeAction('/api/mix', { targetFolder: track.fullPath, preset: track.preset });
           } else if (action === 'master') {
             const masterTarget = track.mixedFile ? track.mixedFile : track.fullPath;
-            const albumMasterFolder = this.albumRoot + '\\' + this.currentVersion;
             
             success = await this.executeAction('/api/master', {
               targetPath: masterTarget,
               preset: track.preset,
-              outputFolder: albumMasterFolder,
+              outputFolder: this.outputFolder,
               trackName: track.name
             });
           }
@@ -559,6 +739,11 @@
         },
 
         async batchProcessColumn(action) {
+          if (!this.isReadyToProcess()) {
+            this.log('Both Input Folder and Output Folder must be specified before starting processing.', 'error');
+            return;
+          }
+
           this.log(`Starting Batch Processing for column: ${action.toUpperCase()}`, 'info');
           for (let i = 0; i < this.tracks.length; i++) {
              const track = this.tracks[i];
@@ -577,7 +762,12 @@
         },
 
         async batchProcessMissing() {
-          this.log(`Starting Batch Processing for all tracks into ${this.currentVersion}...`, 'info');
+          if (!this.isReadyToProcess()) {
+            this.log('Both Input Folder and Output Folder must be specified before starting processing.', 'error');
+            return;
+          }
+
+          this.log(`Starting Batch Processing for all tracks into: ${this.outputFolder}...`, 'info');
           for (let i = 0; i < this.tracks.length; i++) {
              const track = this.tracks[i];
              if (!track.hasSplit) {
@@ -589,7 +779,7 @@
                 await this.runRowAction('mix', track);
              }
              if (!track.hasMastered) {
-                this.log(`[Batch] Mastering ${track.name} into ${this.currentVersion}...`);
+                this.log(`[Batch] Mastering ${track.name} into ${this.outputFolder}...`);
                 await this.runRowAction('master', track);
              }
           }
@@ -597,12 +787,21 @@
         },
 
         async runGlobalSequence() {
-          if (!this.targetPath || !this.albumRoot) return;
-          this.log(`Starting Final Album Sequence for ${this.currentVersion}...`);
+          if (!this.isReadyToProcess()) {
+            this.log('Both Input Folder and Output Folder must be specified before sequencing.', 'error');
+            return;
+          }
+
+          this.log(`Starting Final Album Sequence for ${this.outputFolder}...`);
+          // Extract versionFolder name from outputFolder if it's inside albumRoot
+          let verFolder = 'mastered_versions';
+          if (this.outputFolder && this.albumRoot && this.outputFolder.startsWith(this.albumRoot)) {
+            verFolder = this.outputFolder.substring(this.albumRoot.length).replace(/^[\\/]+/, '');
+          }
           await this.executeAction('/api/sequence', {
             targetPath: this.albumRoot,
             applyRenumbering: true,
-            versionFolder: this.currentVersion
+            versionFolder: verFolder
           });
         }
       }

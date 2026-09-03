@@ -62,7 +62,7 @@ app.get('/api/albums', (req, res) => {
 
 // API: Scan Folder for Audio Files and check their pipeline state
 app.post('/api/scan-folder', (req, res) => {
-  const { folderPath, targetVersion } = req.body;
+  const { folderPath, targetVersion, outputFolder } = req.body;
   if (!folderPath || !fs.existsSync(folderPath)) {
     return res.status(400).json({ error: 'Valid folderPath is required' });
   }
@@ -82,7 +82,16 @@ app.post('/api/scan-folder', (req, res) => {
 
     const versionFolders = getMasterVersionFolders(albumRoot);
     const selectedVersion = targetVersion && versionFolders.includes(targetVersion) ? targetVersion : 'mastered_versions';
-    const masteredFolder = path.join(albumRoot, selectedVersion, 'wav');
+    const resolvedOutputFolder = outputFolder ? path.resolve(outputFolder) : path.join(albumRoot, selectedVersion);
+    const masteredFolder = path.join(resolvedOutputFolder, 'wav');
+
+    // Count existing files in output folder to trigger warnings
+    let existingOutputCount = 0;
+    if (fs.existsSync(masteredFolder)) {
+      existingOutputCount = fs.readdirSync(masteredFolder).filter(f => f.toLowerCase().endsWith('.wav')).length;
+    } else if (fs.existsSync(resolvedOutputFolder)) {
+      existingOutputCount = fs.readdirSync(resolvedOutputFolder).filter(f => f.toLowerCase().endsWith('.wav')).length;
+    }
 
     const results = audioFiles.map(file => {
       const parsed = path.parse(file);
@@ -146,6 +155,8 @@ app.post('/api/scan-folder', (req, res) => {
     res.json({
       folder: folderPath,
       albumRoot,
+      outputFolder: resolvedOutputFolder,
+      existingOutputCount,
       availableVersions: versionFolders,
       currentVersion: selectedVersion,
       tracks: results
@@ -153,6 +164,22 @@ app.post('/api/scan-folder', (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// API: Check Output Folder for Existing Files
+app.post('/api/check-output-folder', (req, res) => {
+  const { outputFolder } = req.body;
+  if (!outputFolder || !fs.existsSync(outputFolder)) {
+    return res.json({ exists: false, count: 0, outputFolder: outputFolder || '' });
+  }
+  const wavDir = path.join(outputFolder, 'wav');
+  let count = 0;
+  if (fs.existsSync(wavDir)) {
+    count = fs.readdirSync(wavDir).filter(f => f.toLowerCase().endsWith('.wav')).length;
+  } else {
+    count = fs.readdirSync(outputFolder).filter(f => f.toLowerCase().endsWith('.wav')).length;
+  }
+  res.json({ exists: true, count, outputFolder });
 });
 
 // API: Create new version folder (mastered_versions_v1, v2, etc.)
@@ -186,6 +213,7 @@ app.post('/api/create-version', (req, res) => {
 // API: Browse for folder (native OS dialog via PowerShell STA)
 app.get('/api/browse-folder', (req, res) => {
   const startDir = req.query.start || 'E:\\Music Projects';
+  const type = req.query.type || 'input';
   const scriptPath = path.join(__dirname, 'lib', 'browse.ps1');
   const ps = spawn('powershell.exe', [
     '-NoProfile',
@@ -199,9 +227,13 @@ app.get('/api/browse-folder', (req, res) => {
   ps.on('close', () => {
     const folder = result.trim();
     if (folder && fs.existsSync(folder)) {
-      const sunoSub = path.join(folder, 'suno_exports');
-      const finalFolder = fs.existsSync(sunoSub) ? sunoSub : folder;
-      res.json({ folder: finalFolder });
+      if (type === 'input') {
+        const sunoSub = path.join(folder, 'suno_exports');
+        const finalFolder = fs.existsSync(sunoSub) ? sunoSub : folder;
+        res.json({ folder: finalFolder });
+      } else {
+        res.json({ folder });
+      }
     } else {
       res.json({ folder: null });
     }
