@@ -444,7 +444,6 @@ function getCpuUsage() {
 app.get('/api/system-stats', (req, res) => {
   const usage = getCpuUsage();
 
-  
   exec('nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits', (err, stdout) => {
     let gpu = 0;
     if (!err && stdout) {
@@ -528,7 +527,7 @@ app.post('/api/quality-report', async (req, res) => {
         path.join(outputFolder, base),
         path.join(outputFolder, `${base.replace(/^\d+[\s_-]*/, '').replace(/\.wav$/i, '')}.wav`)
       ];
-      const found = candidates.find(c => (fs.existsSync(c) && fs.statSync(c).isFile()));
+      const found = candidates.find(c => fs.existsSync(c) && fs.statSync(c).isFile());
       if (found) {
         resolvedMasteredFile = found;
       } else if (fs.existsSync(path.join(outputFolder, 'wav'))) {

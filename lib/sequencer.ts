@@ -481,5 +481,3 @@ export async function sequenceAlbum(targetPath, options = {}) {
     sequencedTracklist: sequenced
   };
 }
-
-
