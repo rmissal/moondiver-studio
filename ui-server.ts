@@ -528,7 +528,7 @@ app.post('/api/quality-report', async (req, res) => {
         path.join(outputFolder, base),
         path.join(outputFolder, `${base.replace(/^\d+[\s_-]*/, '').replace(/\.wav$/i, '')}.wav`)
       ];
-      const found = candidates.find(c => fs.existsSync(c));
+      const found = candidates.find(c => (fs.existsSync(c) && fs.statSync(c).isFile()));
       if (found) {
         resolvedMasteredFile = found;
       } else if (fs.existsSync(path.join(outputFolder, 'wav'))) {
