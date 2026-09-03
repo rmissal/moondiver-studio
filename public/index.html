@@ -9,8 +9,8 @@
 </head>
 <body class="bg-[#0b1120] text-gray-100 min-h-screen p-8 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] bg-fixed" x-data="studioApp()">
 
-  <!-- Persistent DOM Audio Player -->
-  <audio x-ref="masterAudio" class="hidden" preload="auto"
+  <!-- Persistent DOM Audio Player (Offscreen but Active for Browser Audio Engine) -->
+  <audio x-ref="masterAudio" style="position: fixed; top: -100px; left: -100px; width: 1px; height: 1px; opacity: 0.01; pointer-events: none;" preload="auto"
     @timeupdate="if ($refs.masterAudio) audioCurrentTime = $refs.masterAudio.currentTime"
     @durationchange="if ($refs.masterAudio) audioDuration = $refs.masterAudio.duration || 0"
     @loadedmetadata="if ($refs.masterAudio) audioDuration = $refs.masterAudio.duration || 0"
@@ -19,29 +19,25 @@
   ></audio>
 
   <!-- Floating Glassmorphic Hardware & Master Playback HUD (Always Visible on Scroll) -->
-  <div class="fixed top-4 right-4 sm:right-8 z-50 flex items-center gap-3.5 bg-[#0a0f1d]/90 px-4 py-2 rounded-2xl border border-gray-700/70 backdrop-blur-xl shadow-2xl transition-all duration-300">
+  <div class="fixed top-4 right-4 sm:right-8 z-50 flex items-center gap-3 bg-[#0a0f1d]/95 px-4 py-2 rounded-2xl border border-gray-700/80 backdrop-blur-2xl shadow-2xl transition-all duration-300">
     <!-- CPU Monitoring -->
-    <div class="flex items-center gap-2" title="Real-time CPU Utilization">
-      <span class="text-[11px] text-cyan-400 font-bold tracking-wider uppercase">CPU</span>
-      <div class="flex items-center gap-1.5">
-        <div class="w-12 h-1.5 bg-gray-800 rounded-full overflow-hidden border border-gray-700/50">
-          <div class="h-full transition-all duration-500" :class="cpu > 80 ? 'bg-red-500' : (cpu > 50 ? 'bg-yellow-500' : 'bg-cyan-400')" :style="`width: ${cpu}%`"></div>
-        </div>
-        <span class="text-[11px] font-mono font-bold text-gray-200 w-7 text-right" x-text="`${cpu}%`"></span>
+    <div class="flex items-center gap-1.5" title="Real-time CPU Utilization">
+      <span class="text-[10px] text-cyan-400 font-bold tracking-wider uppercase">CPU</span>
+      <div class="w-10 h-1.5 bg-gray-800 rounded-full overflow-hidden border border-gray-700/50">
+        <div class="h-full transition-all duration-500" :class="cpu > 80 ? 'bg-red-500' : (cpu > 50 ? 'bg-yellow-500' : 'bg-cyan-400')" :style="`width: ${cpu}%`"></div>
       </div>
+      <span class="text-[10px] font-mono font-bold text-gray-200 w-6 text-right" x-text="`${cpu}%`"></span>
     </div>
 
     <div class="h-4 w-[1px] bg-gray-700/70"></div>
 
     <!-- GPU Monitoring -->
-    <div class="flex items-center gap-2" title="Real-time GPU Utilization (NVIDIA RTX)">
-      <span class="text-[11px] text-purple-400 font-bold tracking-wider uppercase">GPU</span>
-      <div class="flex items-center gap-1.5">
-        <div class="w-12 h-1.5 bg-gray-800 rounded-full overflow-hidden border border-gray-700/50">
-          <div class="h-full transition-all duration-500" :class="gpu > 80 ? 'bg-red-500' : (gpu > 50 ? 'bg-yellow-500' : 'bg-purple-400')" :style="`width: ${gpu}%`"></div>
-        </div>
-        <span class="text-[11px] font-mono font-bold text-gray-200 w-7 text-right" x-text="`${gpu}%`"></span>
+    <div class="flex items-center gap-1.5" title="Real-time GPU Utilization (NVIDIA RTX)">
+      <span class="text-[10px] text-purple-400 font-bold tracking-wider uppercase">GPU</span>
+      <div class="w-10 h-1.5 bg-gray-800 rounded-full overflow-hidden border border-gray-700/50">
+        <div class="h-full transition-all duration-500" :class="gpu > 80 ? 'bg-red-500' : (gpu > 50 ? 'bg-yellow-500' : 'bg-purple-400')" :style="`width: ${gpu}%`"></div>
       </div>
+      <span class="text-[10px] font-mono font-bold text-gray-200 w-6 text-right" x-text="`${gpu}%`"></span>
     </div>
 
     <div class="h-4 w-[1px] bg-gray-700/70"></div>
@@ -49,7 +45,7 @@
     <!-- Master Playback HUD Controls -->
     <div class="flex items-center gap-2">
       <template x-if="currentlyPlayingTrack">
-        <div class="flex items-center gap-2.5">
+        <div class="flex items-center gap-2">
           <!-- Animated sound wave indicator -->
           <div class="flex items-center gap-0.5 text-cyan-400" title="Audio is playing">
             <span class="w-1 h-3 bg-cyan-400 animate-pulse rounded-full"></span>
@@ -57,7 +53,7 @@
             <span class="w-1 h-2 bg-cyan-400 animate-pulse delay-150 rounded-full"></span>
           </div>
           
-          <span class="text-xs font-bold text-white max-w-[100px] sm:max-w-[140px] truncate" x-text="currentlyPlayingTitle" :title="currentlyPlayingTitle"></span>
+          <span class="text-xs font-bold text-white max-w-[90px] sm:max-w-[130px] truncate" x-text="currentlyPlayingTitle" :title="currentlyPlayingTitle"></span>
 
           <!-- Rewind 10s -->
           <button @click="rewindAudio(10)" class="p-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-cyan-400 transition shadow flex items-center justify-center" title="Rewind 10 seconds (-10s)">
@@ -80,10 +76,16 @@
           </button>
 
           <!-- Interactive Scrubber & Timeline -->
-          <div class="flex items-center gap-1.5 bg-gray-900/60 px-2 py-1 rounded-xl border border-gray-800">
+          <div class="flex items-center gap-1.5 bg-gray-900/80 px-2 py-1 rounded-xl border border-gray-800">
             <span class="text-[10px] font-mono text-gray-300 w-7 text-right" x-text="formatTime(audioCurrentTime)"></span>
-            <input type="range" min="0" :max="audioDuration || 100" step="0.25" :value="audioCurrentTime" @input="seekAudio($event)" class="w-20 sm:w-32 h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-400 hover:accent-cyan-300" title="Scrub / Scroll audio position">
+            <input type="range" min="0" :max="audioDuration || 100" step="0.25" :value="audioCurrentTime" @input="seekAudio($event)" class="w-16 sm:w-28 h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-400 hover:accent-cyan-300" title="Scrub / Scroll audio position">
             <span class="text-[10px] font-mono text-gray-500 w-7" x-text="formatTime(audioDuration)"></span>
+          </div>
+
+          <!-- Volume Slider -->
+          <div class="hidden md:flex items-center gap-1 text-gray-400" title="Master Volume">
+            <svg class="w-3.5 h-3.5 text-cyan-400" fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+            <input type="range" min="0" max="1" step="0.05" x-model="audioVolume" @input="if ($refs.masterAudio) $refs.masterAudio.volume = audioVolume" class="w-14 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-400" title="Volume">
           </div>
 
           <!-- Stop Button -->
@@ -94,7 +96,7 @@
       </template>
 
       <template x-if="!currentlyPlayingTrack">
-        <div class="flex items-center gap-1 text-gray-500 text-xs font-medium">
+        <div class="flex items-center gap-1.5 text-gray-500 text-xs font-medium">
           <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           <span>Playback Idle</span>
         </div>
