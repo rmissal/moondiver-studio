@@ -9,19 +9,19 @@ If you've noticed a bug or have a feature request, make sure to check our [Issue
 ## 2. Setting up your environment
 
 1. Fork the repo and clone it locally.
-2. Run 
-ode setup.js to install Node.js dependencies, Python, PyTorch, and Demucs.
+2. Run
+   ode setup.js to install Node.js dependencies, Python, PyTorch, and Demucs.
 3. Ensure you have downloaded the static FFmpeg binaries and placed them in fmpeg/bin/.
-4. Run 
-pm run ui to start the local development server on http://localhost:3000.
+4. Run
+   pm run ui to start the local development server on http://localhost:3000.
 
 ## 3. Making Changes
 
-- Ensure your code follows the existing style (we use ESLint and Prettier). Run 
-pm run lint before committing.
+- Ensure your code follows the existing style (we use ESLint and Prettier). Run
+  pm run lint before committing.
 - Write tests for your new features or bug fixes.
-- Ensure all tests pass by running 
-pm test.
+- Ensure all tests pass by running
+  pm test.
 
 ## 4. Submitting a Pull Request
 

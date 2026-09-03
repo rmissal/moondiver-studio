@@ -39,7 +39,7 @@ jobs:
           # Create a clean release folder without dev tools and git history
           mkdir release_build
           rsync -a --exclude={'.git','.github','node_modules','test','.gitignore','.prettierignore','.prettierrc','eslint.config.mjs','release_build'} ./ release_build/
-          
+
           # Create zip archive
           cd release_build
           zip -r ../moondiver-studio-${{ github.ref_name }}.zip ./*

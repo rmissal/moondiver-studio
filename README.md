@@ -41,7 +41,7 @@ node setup.js
 npm run ui
 `
 
-*(Or simply double click **start.bat** on Windows for a styled ANSI CLI terminal experience!)*
+_(Or simply double click **start.bat** on Windows for a styled ANSI CLI terminal experience!)_
 
 _Opens the Mastering Dashboard in your browser at http://localhost:3000._
 
@@ -53,6 +53,7 @@ npm run test:coverage
 `
 
 ---
+
 ## 🛠️ Included MCP Tools
 
 The repository provides the following tools via the Model Context Protocol (MCP) for Antigravity and LLM assistants:
@@ -89,23 +90,23 @@ Returns all available mastering sound profiles and their DSP filter parameters.
 
 ## 🎛️ Mastering Profiles (Presets)
 
-| Preset                       | Target LUFS |  True Peak  |    LRA    | Stereo Width | Characteristics                                                                            |
-| :--------------------------- | :---------: | :---------: | :-------: | :----------: | :----------------------------------------------------------------------------------------- |
-| **`auto`** _(Default)_       |  _Dynamic_  | `-1.5 dBTP` | _Dynamic_ |    _1.15_    | **Intelligent acoustic analysis in Pass 1** + dynamic profile selection                    |
-| **
-ew_age_ambient**        |   -16.0   | -1.5 dBTP |  15.0   |    1.15    | Open, smooth, silky treble sheen, wide panorama for pads, flutes & piano                   |
-| **chillout_balearic**      |   -15.0   | -1.5 dBTP |  14.0   |    1.15    | Warm analog saturation, crisp snares, deep sub-bass, and immersive pad spacing             |
-| **
-u_jazz**                |   -16.0   | -1.5 dBTP |  15.0   |    1.08    | Clean, intimate, preserving transients of acoustic drums and upright bass without crushing |
-| **coustic_jazz**          |   -16.0   | -1.5 dBTP |  16.0   |    1.05    | Organic and untreated. True to live room acoustics, maximizing natural breathing space     |
-| **melodic_dance**          |   -14.0   | -1.5 dBTP |  10.0   |    1.10    | Punchy 4/4 kicks, thick sub-bass, bright synth leads, tight low-end compression            |
-| **cinematic_orchestral**   |   -15.0   | -1.5 dBTP |  18.0   |    1.10    | Enormous dynamic range for orchestral swells, strings & soundtracks with powerful sub bass |
+| Preset                   | Target LUFS |  True Peak  |    LRA    | Stereo Width | Characteristics                                                                            |
+| :----------------------- | :---------: | :---------: | :-------: | :----------: | :----------------------------------------------------------------------------------------- |
+| **`auto`** _(Default)_   |  _Dynamic_  | `-1.5 dBTP` | _Dynamic_ |    _1.15_    | **Intelligent acoustic analysis in Pass 1** + dynamic profile selection                    |
+| **                       |
+| ew_age_ambient**         |    -16.0    |  -1.5 dBTP  |   15.0    |     1.15     | Open, smooth, silky treble sheen, wide panorama for pads, flutes & piano                   |
+| **chillout_balearic**    |    -15.0    |  -1.5 dBTP  |   14.0    |     1.15     | Warm analog saturation, crisp snares, deep sub-bass, and immersive pad spacing             |
+| **                       |
+| u_jazz**                 |    -16.0    |  -1.5 dBTP  |   15.0    |     1.08     | Clean, intimate, preserving transients of acoustic drums and upright bass without crushing |
+| **coustic_jazz**         |    -16.0    |  -1.5 dBTP  |   16.0    |     1.05     | Organic and untreated. True to live room acoustics, maximizing natural breathing space     |
+| **melodic_dance**        |    -14.0    |  -1.5 dBTP  |   10.0    |     1.10     | Punchy 4/4 kicks, thick sub-bass, bright synth leads, tight low-end compression            |
+| **cinematic_orchestral** |    -15.0    |  -1.5 dBTP  |   18.0    |     1.10     | Enormous dynamic range for orchestral swells, strings & soundtracks with powerful sub bass |
 
-| **`acoustic_instrumental`**  |   `-16.0`   | `-1.5 dBTP` |  `14.0`   |    `1.06`    | Clean, organic timbre for acoustic guitars, harp & solo instruments without harshness      |
-| **`meditation_chillout`**    |   `-18.0`   | `-1.5 dBTP` |  `16.0`   |    `1.20`    | Gentle, transparent, minimal compression, maximal spherical immersion                      |
-| **`streaming_pop_standard`** |   `-14.0`   | `-1.0 dBTP` |  `10.0`   |    `1.00`    | Punchy and assertive impact adhering to modern streaming radio standards                   |
-| **`stadium_live_rock`**      |   `-15.0`   | `-1.5 dBTP` |  `15.0`   |    `1.25`    | Massive live stage, biting guitars, snappy drums and airy high-end atmosphere              |
-| **`custom`**                 |  _Custom_   |  _Custom_   | _Custom_  |   _Custom_   | Full manual control of all filters, frequencies, and gain parameters                       |
+| **`acoustic_instrumental`** | `-16.0` | `-1.5 dBTP` | `14.0` | `1.06` | Clean, organic timbre for acoustic guitars, harp & solo instruments without harshness |
+| **`meditation_chillout`** | `-18.0` | `-1.5 dBTP` | `16.0` | `1.20` | Gentle, transparent, minimal compression, maximal spherical immersion |
+| **`streaming_pop_standard`** | `-14.0` | `-1.0 dBTP` | `10.0` | `1.00` | Punchy and assertive impact adhering to modern streaming radio standards |
+| **`stadium_live_rock`** | `-15.0` | `-1.5 dBTP` | `15.0` | `1.25` | Massive live stage, biting guitars, snappy drums and airy high-end atmosphere |
+| **`custom`** | _Custom_ | _Custom_ | _Custom_ | _Custom_ | Full manual control of all filters, frequencies, and gain parameters |
 
 ---
 
