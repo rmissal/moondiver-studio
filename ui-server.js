@@ -122,19 +122,25 @@ app.post('/api/scan-folder', (req, res) => {
       const mixedFile = mixedCandidates.find(f => fs.existsSync(f)) || null;
       const hasMixed = !!mixedFile;
 
-      // Check Step 4: Mastered in selected version folder
+      // Check Step 4: Mastered in selected version folder (picks newest master)
       let hasMastered = false;
       let masteredFile = null;
       let masterStats = null;
       if (fs.existsSync(masteredFolder)) {
          const wavFiles = fs.readdirSync(masteredFolder);
          const cleanName = name.replace(/^\d+[\s_-]*/, '').toLowerCase();
-         const match = wavFiles.find(f => {
+         const matches = wavFiles.filter(f => {
            if (!f.toLowerCase().endsWith('.wav')) return false;
            const fClean = f.replace(/^\d+[\s_-]*/, '').replace(/\.wav$/i, '').toLowerCase();
            return fClean === cleanName || f.toLowerCase().includes(cleanName);
          });
-         if (match) {
+         if (matches.length > 0) {
+            matches.sort((a, b) => {
+              const statA = fs.statSync(path.join(masteredFolder, a));
+              const statB = fs.statSync(path.join(masteredFolder, b));
+              return statB.mtimeMs - statA.mtimeMs;
+            });
+            const match = matches[0];
             hasMastered = true;
             masteredFile = path.join(masteredFolder, match);
             
