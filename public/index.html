@@ -9,36 +9,81 @@
 </head>
 <body class="bg-[#0b1120] text-gray-100 min-h-screen p-8 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] bg-fixed" x-data="studioApp()">
 
-  <div class="max-w-7xl mx-auto relative z-10">
+  <!-- Floating Glassmorphic Hardware & Master Playback HUD (Always Visible on Scroll) -->
+  <div class="fixed top-4 right-4 sm:right-8 z-50 flex items-center gap-3.5 bg-[#0a0f1d]/90 px-4 py-2 rounded-2xl border border-gray-700/70 backdrop-blur-xl shadow-2xl transition-all duration-300">
+    <!-- CPU Monitoring -->
+    <div class="flex items-center gap-2" title="Real-time CPU Utilization">
+      <span class="text-[11px] text-cyan-400 font-bold tracking-wider uppercase">CPU</span>
+      <div class="flex items-center gap-1.5">
+        <div class="w-12 h-1.5 bg-gray-800 rounded-full overflow-hidden border border-gray-700/50">
+          <div class="h-full transition-all duration-500" :class="cpu > 80 ? 'bg-red-500' : (cpu > 50 ? 'bg-yellow-500' : 'bg-cyan-400')" :style="`width: ${cpu}%`"></div>
+        </div>
+        <span class="text-[11px] font-mono font-bold text-gray-200 w-7 text-right" x-text="`${cpu}%`"></span>
+      </div>
+    </div>
+
+    <div class="h-4 w-[1px] bg-gray-700/70"></div>
+
+    <!-- GPU Monitoring -->
+    <div class="flex items-center gap-2" title="Real-time GPU Utilization (NVIDIA RTX)">
+      <span class="text-[11px] text-purple-400 font-bold tracking-wider uppercase">GPU</span>
+      <div class="flex items-center gap-1.5">
+        <div class="w-12 h-1.5 bg-gray-800 rounded-full overflow-hidden border border-gray-700/50">
+          <div class="h-full transition-all duration-500" :class="gpu > 80 ? 'bg-red-500' : (gpu > 50 ? 'bg-yellow-500' : 'bg-purple-400')" :style="`width: ${gpu}%`"></div>
+        </div>
+        <span class="text-[11px] font-mono font-bold text-gray-200 w-7 text-right" x-text="`${gpu}%`"></span>
+      </div>
+    </div>
+
+    <div class="h-4 w-[1px] bg-gray-700/70"></div>
+
+    <!-- Master Playback HUD Controls -->
+    <div class="flex items-center gap-2">
+      <template x-if="playingAudio">
+        <div class="flex items-center gap-2">
+          <!-- Animated sound wave indicator -->
+          <div class="flex items-center gap-0.5 text-cyan-400" title="Audio is playing">
+            <span class="w-1 h-3 bg-cyan-400 animate-pulse rounded-full"></span>
+            <span class="w-1 h-4 bg-cyan-400 animate-pulse delay-75 rounded-full"></span>
+            <span class="w-1 h-2 bg-cyan-400 animate-pulse delay-150 rounded-full"></span>
+          </div>
+          
+          <span class="text-xs font-bold text-white max-w-[120px] sm:max-w-[160px] truncate" x-text="currentlyPlayingTitle" :title="currentlyPlayingTitle"></span>
+
+          <!-- Pause / Resume Toggle -->
+          <button @click="toggleGlobalPlayback()" class="p-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white transition shadow flex items-center justify-center" :title="isPlaying ? 'Pause playback' : 'Resume playback'">
+            <template x-if="isPlaying">
+              <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            </template>
+            <template x-if="!isPlaying">
+              <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </template>
+          </button>
+
+          <!-- Stop Button -->
+          <button @click="stopAudio()" class="p-1.5 rounded-lg bg-red-600/30 hover:bg-red-600/60 text-red-300 border border-red-500/40 transition flex items-center justify-center shadow" title="Stop playback">
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+          </button>
+        </div>
+      </template>
+
+      <template x-if="!playingAudio">
+        <div class="flex items-center gap-1 text-gray-500 text-xs font-medium">
+          <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>Playback Idle</span>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto relative z-10 pt-2">
     <!-- Header -->
-    <header class="mb-6 flex flex-col md:flex-row items-center justify-between gap-6">
-      <div class="text-center md:text-left">
+    <header class="mb-6">
+      <div class="text-left">
         <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 pb-1">
           Moondiver Mastering
         </h1>
         <p class="text-gray-400 mt-1 text-sm md:text-base font-light tracking-wide">Automated Stem Separation, Analog Warmth Mixing, Two-Pass Linear Mastering & Album Sequencing</p>
-      </div>
-      <!-- Hardware Monitoring -->
-      <div class="flex items-center gap-6 bg-gray-900/80 px-5 py-3 rounded-2xl border border-gray-800 backdrop-blur shadow-lg">
-        <div class="flex items-center gap-3" title="Real-time CPU Utilization">
-          <span class="text-xs text-gray-400 font-bold tracking-wider uppercase">CPU</span>
-          <div class="flex items-center gap-2">
-            <div class="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-              <div class="h-full transition-all duration-500" :class="cpu > 80 ? 'bg-red-500' : (cpu > 50 ? 'bg-yellow-500' : 'bg-cyan-500')" :style="`width: ${cpu}%`"></div>
-            </div>
-            <span class="text-xs font-mono font-bold text-gray-300 w-8" x-text="`${cpu}%`"></span>
-          </div>
-        </div>
-        <div class="h-6 w-[1px] bg-gray-700"></div>
-        <div class="flex items-center gap-3" title="Real-time GPU Utilization (NVIDIA RTX)">
-          <span class="text-xs text-purple-400 font-bold tracking-wider uppercase">GPU</span>
-          <div class="flex items-center gap-2">
-            <div class="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-              <div class="h-full transition-all duration-500" :class="gpu > 80 ? 'bg-red-500' : (gpu > 50 ? 'bg-yellow-500' : 'bg-purple-500')" :style="`width: ${gpu}%`"></div>
-            </div>
-            <span class="text-xs font-mono font-bold text-gray-300 w-8" x-text="`${gpu}%`"></span>
-          </div>
-        </div>
       </div>
     </header>
 
@@ -630,6 +675,21 @@
           this.isPlaying = false;
           this.currentlyPlayingTrack = null;
           this.currentlyPlayingTitle = '';
+        },
+
+        toggleGlobalPlayback() {
+          if (!this.playingAudio) return;
+          if (this.playingAudio.paused) {
+            this.playingAudio.play().then(() => {
+              this.isPlaying = true;
+            }).catch(e => {
+              this.log('Playback error: ' + e.message, 'error');
+              this.stopAudio();
+            });
+          } else {
+            this.playingAudio.pause();
+            this.isPlaying = false;
+          }
         },
 
         isReadyToProcess() {
