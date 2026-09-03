@@ -18,7 +18,7 @@
     "sinntaucher"
   ],
   "author": "SinnTaucher",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "dependencies": {
     "express": "^5.2.1"
   },
