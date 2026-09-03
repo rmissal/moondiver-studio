@@ -70,8 +70,10 @@ app.post('/api/scan-folder', (req, res) => {
 
   try {
     const files = fs.readdirSync(folderPath);
-    const audioFiles = files.filter(f => f.toLowerCase().endsWith('.wav') || f.toLowerCase().endsWith('.flac') || f.toLowerCase().endsWith('.mp3'));
-    
+    const audioFiles = files.filter(
+      f => f.toLowerCase().endsWith('.wav') || f.toLowerCase().endsWith('.flac') || f.toLowerCase().endsWith('.mp3')
+    );
+
     // Determine album root (one folder up if we are in suno_exports)
     let albumRoot = folderPath;
     if (albumRoot.endsWith('\\') || albumRoot.endsWith('/')) {
@@ -82,7 +84,8 @@ app.post('/api/scan-folder', (req, res) => {
     }
 
     const versionFolders = getMasterVersionFolders(albumRoot);
-    const selectedVersion = targetVersion && versionFolders.includes(targetVersion) ? targetVersion : 'mastered_versions';
+    const selectedVersion =
+      targetVersion && versionFolders.includes(targetVersion) ? targetVersion : 'mastered_versions';
     const resolvedOutputFolder = outputFolder ? path.resolve(outputFolder) : path.join(albumRoot, selectedVersion);
     const masteredFolder = path.join(resolvedOutputFolder, 'wav');
 
@@ -98,20 +101,23 @@ app.post('/api/scan-folder', (req, res) => {
       const parsed = path.parse(file);
       const name = parsed.name;
       const fullPath = path.join(folderPath, file);
-      
+
       // Check Step 1: Raw Analysis
       const htdemucsFolder = path.join(folderPath, 'htdemucs_ft', name);
       const rawAnalysisFile = path.join(htdemucsFolder, 'raw_analysis.json');
       let rawAnalysis = null;
       if (fs.existsSync(rawAnalysisFile)) {
-        try { rawAnalysis = JSON.parse(fs.readFileSync(rawAnalysisFile, 'utf8')); } catch {}
+        try {
+          rawAnalysis = JSON.parse(fs.readFileSync(rawAnalysisFile, 'utf8'));
+        } catch {}
       }
       const hasAnalyzed = !!rawAnalysis;
 
       // Check Step 2: Demucs Stems
       const mixedStemsFolder = path.join(htdemucsFolder, 'mixed_stems');
-      const hasSplit = fs.existsSync(htdemucsFolder) && fs.readdirSync(htdemucsFolder).filter(f => f.endsWith('.wav')).length >= 4;
-      
+      const hasSplit =
+        fs.existsSync(htdemucsFolder) && fs.readdirSync(htdemucsFolder).filter(f => f.endsWith('.wav')).length >= 4;
+
       // Check Step 3: Auto-Mix (supports both Drifting_Mixed.wav and auto_mixdown.wav)
       const mixedCandidates = [
         path.join(mixedStemsFolder, `${name}_Mixed.wav`),
@@ -127,36 +133,39 @@ app.post('/api/scan-folder', (req, res) => {
       let masteredFile = null;
       let masterStats = null;
       if (fs.existsSync(masteredFolder)) {
-         const wavFiles = fs.readdirSync(masteredFolder);
-         const cleanName = name.replace(/^\d+[\s_-]*/, '').toLowerCase();
-         const matches = wavFiles.filter(f => {
-           if (!f.toLowerCase().endsWith('.wav')) return false;
-           const fClean = f.replace(/^\d+[\s_-]*/, '').replace(/\.wav$/i, '').toLowerCase();
-           return fClean === cleanName || f.toLowerCase().includes(cleanName);
-         });
-         if (matches.length > 0) {
-            matches.sort((a, b) => {
-              const statA = fs.statSync(path.join(masteredFolder, a));
-              const statB = fs.statSync(path.join(masteredFolder, b));
-              return statB.mtimeMs - statA.mtimeMs;
-            });
-            const match = matches[0];
-            hasMastered = true;
-            masteredFile = path.join(masteredFolder, match);
-            
-            // Look for matching stats JSON in wav/ or in outputFolder/reports/
-            const jsonPath = masteredFile.replace(/\.wav$/i, '.json');
-            const reportPath = path.join(resolvedOutputFolder, 'reports', `${path.basename(match, '.wav')}.json`);
-            if (fs.existsSync(jsonPath)) {
-               try {
-                  masterStats = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-               } catch (e) {}
-            } else if (fs.existsSync(reportPath)) {
-               try {
-                  masterStats = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
-               } catch (e) {}
-            }
-         }
+        const wavFiles = fs.readdirSync(masteredFolder);
+        const cleanName = name.replace(/^\d+[\s_-]*/, '').toLowerCase();
+        const matches = wavFiles.filter(f => {
+          if (!f.toLowerCase().endsWith('.wav')) return false;
+          const fClean = f
+            .replace(/^\d+[\s_-]*/, '')
+            .replace(/\.wav$/i, '')
+            .toLowerCase();
+          return fClean === cleanName || f.toLowerCase().includes(cleanName);
+        });
+        if (matches.length > 0) {
+          matches.sort((a, b) => {
+            const statA = fs.statSync(path.join(masteredFolder, a));
+            const statB = fs.statSync(path.join(masteredFolder, b));
+            return statB.mtimeMs - statA.mtimeMs;
+          });
+          const match = matches[0];
+          hasMastered = true;
+          masteredFile = path.join(masteredFolder, match);
+
+          // Look for matching stats JSON in wav/ or in outputFolder/reports/
+          const jsonPath = masteredFile.replace(/\.wav$/i, '.json');
+          const reportPath = path.join(resolvedOutputFolder, 'reports', `${path.basename(match, '.wav')}.json`);
+          if (fs.existsSync(jsonPath)) {
+            try {
+              masterStats = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+            } catch (e) {}
+          } else if (fs.existsSync(reportPath)) {
+            try {
+              masterStats = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+            } catch (e) {}
+          }
+        }
       }
 
       return {
@@ -240,12 +249,14 @@ app.get('/api/browse-folder', (req, res) => {
   const ps = spawn('powershell.exe', [
     '-NoProfile',
     '-STA',
-    '-ExecutionPolicy', 'Bypass',
-    '-File', scriptPath,
+    '-ExecutionPolicy',
+    'Bypass',
+    '-File',
+    scriptPath,
     startDir
   ]);
   let result = '';
-  ps.stdout.on('data', d => result += d.toString());
+  ps.stdout.on('data', d => (result += d.toString()));
   ps.on('close', () => {
     const folder = result.trim();
     if (folder && fs.existsSync(folder)) {
@@ -284,19 +295,19 @@ app.get('/api/stream', (req, res) => {
     const isMp3 = filePath.toLowerCase().endsWith('.mp3');
     const isOgg = filePath.toLowerCase().endsWith('.ogg');
     const isFlac = filePath.toLowerCase().endsWith('.flac');
-    const contentType = isMp3 ? 'audio/mpeg' : (isOgg ? 'audio/ogg' : (isFlac ? 'audio/flac' : 'audio/wav'));
+    const contentType = isMp3 ? 'audio/mpeg' : isOgg ? 'audio/ogg' : isFlac ? 'audio/flac' : 'audio/wav';
 
     if (range) {
       const parts = range.replace(/bytes=/, '').split('-');
       const start = parseInt(parts[0], 10);
       const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-      
+
       if (start >= fileSize) {
         res.status(416).send('Requested range not satisfiable\n' + start + ' >= ' + fileSize);
         return;
       }
-      
-      const chunksize = (end - start) + 1;
+
+      const chunksize = end - start + 1;
       const file = fs.createReadStream(filePath, { start, end });
       const head = {
         'Content-Range': `bytes ${start}-${end}/${fileSize}`,
@@ -333,10 +344,13 @@ app.post('/api/split', (req, res) => {
   const procFull = spawn('python3', ['-m', 'demucs.separate', '-n', 'htdemucs_ft', targetFile, '-o', outDir]);
 
   let log = '';
-  procFull.stderr.on('data', d => { log += d.toString() });
-  
+  procFull.stderr.on('data', d => {
+    log += d.toString();
+  });
+
   procFull.on('close', code => {
-    if (code === 0) res.json({ status: 'success', message: 'Stems successfully split!', outDir: path.join(outDir, 'htdemucs_ft') });
+    if (code === 0)
+      res.json({ status: 'success', message: 'Stems successfully split!', outDir: path.join(outDir, 'htdemucs_ft') });
     else res.status(500).json({ error: `Demucs failed: ${log}` });
   });
 });
@@ -376,7 +390,13 @@ app.get('/api/list-directory', (req, res) => {
     const directories = entries
       .filter(e => e.isDirectory())
       .map(e => e.name)
-      .filter(name => !name.startsWith('.') && name !== 'node_modules' && name !== '$RECYCLE.BIN' && name !== 'System Volume Information')
+      .filter(
+        name =>
+          !name.startsWith('.') &&
+          name !== 'node_modules' &&
+          name !== '$RECYCLE.BIN' &&
+          name !== 'System Volume Information'
+      )
       .sort((a, b) => a.localeCompare(b));
 
     const parentPath = path.dirname(targetPath);
@@ -404,23 +424,23 @@ function getCpuUsage() {
     }
     idle += cpu.times.idle;
   }
-  
+
   if (lastCpuTime.total === 0) {
     lastCpuTime = { idle, total };
     return 0;
   }
-  
+
   const idleDiff = idle - lastCpuTime.idle;
   const totalDiff = total - lastCpuTime.total;
   lastCpuTime = { idle, total };
-  
-  return 100 - ~~(100 * idleDiff / totalDiff);
+
+  return 100 - ~~((100 * idleDiff) / totalDiff);
 }
 
 // API: System Stats
 app.get('/api/system-stats', (req, res) => {
   const usage = getCpuUsage();
-  
+
   const { exec } = require('child_process');
   exec('nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits', (err, stdout) => {
     let gpu = 0;
@@ -510,7 +530,10 @@ app.post('/api/quality-report', async (req, res) => {
         resolvedMasteredFile = found;
       } else if (fs.existsSync(path.join(outputFolder, 'wav'))) {
         const wavs = fs.readdirSync(path.join(outputFolder, 'wav'));
-        const cleanTarget = base.replace(/^\d+[\s_-]*/, '').replace(/\.wav$/i, '').toLowerCase();
+        const cleanTarget = base
+          .replace(/^\d+[\s_-]*/, '')
+          .replace(/\.wav$/i, '')
+          .toLowerCase();
         const m = wavs.find(w => w.toLowerCase().includes(cleanTarget));
         if (m) resolvedMasteredFile = path.join(outputFolder, 'wav', m);
       }
@@ -524,7 +547,9 @@ app.post('/api/quality-report', async (req, res) => {
     const jsonPath = resolvedMasteredFile.replace(/\.wav$/i, '.json');
     let existingStats = null;
     if (fs.existsSync(jsonPath)) {
-      try { existingStats = JSON.parse(fs.readFileSync(jsonPath, 'utf8')); } catch {}
+      try {
+        existingStats = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+      } catch {}
     }
 
     // 1. Analyze mastered file
@@ -536,7 +561,9 @@ app.post('/api/quality-report', async (req, res) => {
       const base = path.basename(rawFile, path.extname(rawFile));
       const cached = path.join(path.dirname(rawFile), 'htdemucs_ft', base, 'raw_analysis.json');
       if (fs.existsSync(cached)) {
-        try { rawMetrics = JSON.parse(fs.readFileSync(cached, 'utf8')); } catch {}
+        try {
+          rawMetrics = JSON.parse(fs.readFileSync(cached, 'utf8'));
+        } catch {}
       }
       if (!rawMetrics) {
         rawMetrics = await analyzeFile(rawFile);
@@ -544,13 +571,24 @@ app.post('/api/quality-report', async (req, res) => {
     }
 
     // 3. Resolve Effective Preset & Genre Name
-    const resolvedPresetKey = (preset && preset !== 'auto')
-      ? preset
-      : (existingStats?.preset || existingStats?.appliedPreset || masterMetrics.autoDetectedGenre?.detectedPreset || 'new_age_ambient');
-    const resolvedPresetName = PRESETS[resolvedPresetKey]?.name || existingStats?.presetName || existingStats?.appliedPresetName || masterMetrics.autoDetectedGenre?.genreName || resolvedPresetKey;
+    const resolvedPresetKey =
+      preset && preset !== 'auto'
+        ? preset
+        : existingStats?.preset ||
+          existingStats?.appliedPreset ||
+          masterMetrics.autoDetectedGenre?.detectedPreset ||
+          'new_age_ambient';
+    const resolvedPresetName =
+      PRESETS[resolvedPresetKey]?.name ||
+      existingStats?.presetName ||
+      existingStats?.appliedPresetName ||
+      masterMetrics.autoDetectedGenre?.genreName ||
+      resolvedPresetKey;
 
     // 4. Compile full Quality Report
-    const appleRating = masterMetrics.appleMusicConfidence?.confidenceRating || (masterMetrics.appleMusicConfidence?.scorePercent >= 80 ? 'High' : 'Medium');
+    const appleRating =
+      masterMetrics.appleMusicConfidence?.confidenceRating ||
+      (masterMetrics.appleMusicConfidence?.scorePercent >= 80 ? 'High' : 'Medium');
 
     const report = {
       status: 'success',

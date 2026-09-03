@@ -1,479 +1,911 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Moondiver Mastering</title>
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <link rel="icon" type="image/png" sizes="128x128" href="/favicon.png">
-  <link rel="apple-touch-icon" href="/favicon.png">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-</head>
-<body class="bg-[#0b1120] text-gray-100 min-h-screen p-8 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] bg-fixed" x-data="studioApp()">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Moondiver Mastering</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="128x128" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  </head>
+  <body
+    class="bg-[#0b1120] text-gray-100 min-h-screen p-8 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] bg-fixed"
+    x-data="studioApp()"
+  >
+    <!-- Persistent DOM Audio Player (Offscreen but Active for Browser Audio Engine) -->
+    <audio
+      x-ref="masterAudio"
+      style="position: fixed; top: -100px; left: -100px; width: 1px; height: 1px; opacity: 0.01; pointer-events: none"
+      preload="auto"
+      @timeupdate="if ($refs.masterAudio) audioCurrentTime = $refs.masterAudio.currentTime"
+      @durationchange="if ($refs.masterAudio) audioDuration = $refs.masterAudio.duration || 0"
+      @loadedmetadata="if ($refs.masterAudio) audioDuration = $refs.masterAudio.duration || 0"
+      @ended="stopAudio()"
+      @error="handleAudioError($event)"
+    ></audio>
 
-  <!-- Persistent DOM Audio Player (Offscreen but Active for Browser Audio Engine) -->
-  <audio x-ref="masterAudio" style="position: fixed; top: -100px; left: -100px; width: 1px; height: 1px; opacity: 0.01; pointer-events: none;" preload="auto"
-    @timeupdate="if ($refs.masterAudio) audioCurrentTime = $refs.masterAudio.currentTime"
-    @durationchange="if ($refs.masterAudio) audioDuration = $refs.masterAudio.duration || 0"
-    @loadedmetadata="if ($refs.masterAudio) audioDuration = $refs.masterAudio.duration || 0"
-    @ended="stopAudio()"
-    @error="handleAudioError($event)"
-  ></audio>
+    <!-- Floating Glassmorphic Hardware, Playback & Processing HUD (Always Visible on Scroll) -->
+    <div
+      class="fixed top-4 right-4 sm:right-8 z-50 flex items-center gap-3 bg-[#0a0f1d]/95 px-4 py-2 rounded-2xl backdrop-blur-2xl shadow-2xl transition-all duration-300 border"
+      :class="loading ? 'border-cyan-400/80 shadow-cyan-500/20 ring-1 ring-cyan-400/40' : 'border-gray-700/80'"
+    >
+      <!-- Real-Time Processing Status Indicator (Always Visible) -->
+      <template x-if="loading || isBatchRunning">
+        <div
+          class="flex items-center gap-2 bg-gradient-to-r from-cyan-950/90 to-blue-950/90 border border-cyan-400/60 px-2.5 py-1 rounded-xl shadow-lg"
+          :class="isBatchRunning ? 'animate-pulse' : ''"
+          title="System is processing audio tasks"
+        >
+          <svg
+            class="animate-spin h-3.5 w-3.5 text-cyan-400 shrink-0"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
+          </svg>
+          <span
+            class="text-xs font-bold text-cyan-300 tracking-wide whitespace-nowrap"
+            x-text="abortRequested ? 'Stopping batch...' : 'Processing audio...'"
+          ></span>
+          <template x-if="isBatchRunning && !abortRequested">
+            <button
+              @click="stopBatchProcessing()"
+              class="ml-1 bg-red-600/90 hover:bg-red-500 text-white rounded px-2 py-0.5 text-[10px] font-bold transition shadow flex items-center gap-1"
+              title="Cancel/Stop batch processing"
+            >
+              <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M6 6h12v12H6z" /></svg>
+              Stop
+            </button>
+          </template>
+        </div>
+      </template>
 
-  <!-- Floating Glassmorphic Hardware, Playback & Processing HUD (Always Visible on Scroll) -->
-  <div class="fixed top-4 right-4 sm:right-8 z-50 flex items-center gap-3 bg-[#0a0f1d]/95 px-4 py-2 rounded-2xl backdrop-blur-2xl shadow-2xl transition-all duration-300 border"
-    :class="loading ? 'border-cyan-400/80 shadow-cyan-500/20 ring-1 ring-cyan-400/40' : 'border-gray-700/80'">
+      <template x-if="loading || isBatchRunning">
+        <div class="h-4 w-[1px] bg-cyan-700/60"></div>
+      </template>
 
-    <!-- Real-Time Processing Status Indicator (Always Visible) -->
-    <template x-if="loading || isBatchRunning">
-      <div class="flex items-center gap-2 bg-gradient-to-r from-cyan-950/90 to-blue-950/90 border border-cyan-400/60 px-2.5 py-1 rounded-xl shadow-lg" :class="isBatchRunning ? 'animate-pulse' : ''" title="System is processing audio tasks">
-        <svg class="animate-spin h-3.5 w-3.5 text-cyan-400 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-        <span class="text-xs font-bold text-cyan-300 tracking-wide whitespace-nowrap" x-text="abortRequested ? 'Stopping batch...' : 'Processing audio...'"></span>
-        <template x-if="isBatchRunning && !abortRequested">
-          <button @click="stopBatchProcessing()" class="ml-1 bg-red-600/90 hover:bg-red-500 text-white rounded px-2 py-0.5 text-[10px] font-bold transition shadow flex items-center gap-1" title="Cancel/Stop batch processing">
-            <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
-            Stop
-          </button>
+      <!-- CPU Monitoring -->
+      <div class="flex items-center gap-1.5" title="Real-time CPU Utilization">
+        <span class="text-[10px] text-cyan-400 font-bold tracking-wider uppercase">CPU</span>
+        <div class="w-10 h-1.5 bg-gray-800 rounded-full overflow-hidden border border-gray-700/50">
+          <div
+            class="h-full transition-all duration-500"
+            :class="cpu > 80 ? 'bg-red-500' : (cpu > 50 ? 'bg-yellow-500' : 'bg-cyan-400')"
+            :style="`width: ${cpu}%`"
+          ></div>
+        </div>
+        <span class="text-[10px] font-mono font-bold text-gray-200 w-6 text-right" x-text="`${cpu}%`"></span>
+      </div>
+
+      <div class="h-4 w-[1px] bg-gray-700/70"></div>
+
+      <!-- GPU Monitoring -->
+      <div class="flex items-center gap-1.5" title="Real-time GPU Utilization (NVIDIA RTX)">
+        <span class="text-[10px] text-purple-400 font-bold tracking-wider uppercase">GPU</span>
+        <div class="w-10 h-1.5 bg-gray-800 rounded-full overflow-hidden border border-gray-700/50">
+          <div
+            class="h-full transition-all duration-500"
+            :class="gpu > 80 ? 'bg-red-500' : (gpu > 50 ? 'bg-yellow-500' : 'bg-purple-400')"
+            :style="`width: ${gpu}%`"
+          ></div>
+        </div>
+        <span class="text-[10px] font-mono font-bold text-gray-200 w-6 text-right" x-text="`${gpu}%`"></span>
+      </div>
+
+      <div class="h-4 w-[1px] bg-gray-700/70"></div>
+
+      <!-- Master Playback HUD Controls -->
+      <div class="flex items-center gap-2">
+        <template x-if="currentlyPlayingTrack">
+          <div class="flex items-center gap-2">
+            <!-- Animated sound wave indicator -->
+            <div class="flex items-center gap-0.5 text-cyan-400" title="Audio is playing">
+              <span class="w-1 h-3 bg-cyan-400 animate-pulse rounded-full"></span>
+              <span class="w-1 h-4 bg-cyan-400 animate-pulse delay-75 rounded-full"></span>
+              <span class="w-1 h-2 bg-cyan-400 animate-pulse delay-150 rounded-full"></span>
+            </div>
+
+            <span
+              class="text-xs font-bold text-white max-w-[90px] sm:max-w-[130px] truncate"
+              x-text="currentlyPlayingTitle"
+              :title="currentlyPlayingTitle"
+            ></span>
+
+            <!-- Rewind 10s -->
+            <button
+              @click="rewindAudio(10)"
+              class="p-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-cyan-400 transition shadow flex items-center justify-center"
+              title="Rewind 10 seconds (-10s)"
+            >
+              <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                <path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" />
+              </svg>
+            </button>
+
+            <!-- Pause / Resume Toggle -->
+            <button
+              @click="toggleGlobalPlayback()"
+              class="p-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white transition shadow flex items-center justify-center"
+              :title="isPlaying ? 'Pause playback' : 'Resume playback'"
+            >
+              <template x-if="isPlaying">
+                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                </svg>
+              </template>
+              <template x-if="!isPlaying">
+                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+              </template>
+            </button>
+
+            <!-- Forward 10s -->
+            <button
+              @click="forwardAudio(10)"
+              class="p-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-cyan-400 transition shadow flex items-center justify-center"
+              title="Forward 10 seconds (+10s)"
+            >
+              <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                <path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z" />
+              </svg>
+            </button>
+
+            <!-- Interactive Scrubber & Timeline -->
+            <div class="flex items-center gap-1.5 bg-gray-900/80 px-2 py-1 rounded-xl border border-gray-800">
+              <span
+                class="text-[10px] font-mono text-gray-300 w-7 text-right"
+                x-text="formatTime(audioCurrentTime)"
+              ></span>
+              <input
+                type="range"
+                min="0"
+                :max="audioDuration || 100"
+                step="0.25"
+                :value="audioCurrentTime"
+                @input="seekAudio($event)"
+                class="w-16 sm:w-28 h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-400 hover:accent-cyan-300"
+                title="Scrub / Scroll audio position"
+              />
+              <span class="text-[10px] font-mono text-gray-500 w-7" x-text="formatTime(audioDuration)"></span>
+            </div>
+
+            <!-- Volume Slider -->
+            <div class="hidden md:flex items-center gap-1 text-gray-400" title="Master Volume">
+              <svg class="w-3.5 h-3.5 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
+              </svg>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                x-model="audioVolume"
+                @input="if ($refs.masterAudio) $refs.masterAudio.volume = audioVolume"
+                class="w-14 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                title="Volume"
+              />
+            </div>
+
+            <!-- Stop Button -->
+            <button
+              @click="stopAudio()"
+              class="p-1.5 rounded-lg bg-red-600/30 hover:bg-red-600/60 text-red-300 border border-red-500/40 transition flex items-center justify-center shadow"
+              title="Stop playback"
+            >
+              <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M6 6h12v12H6z" /></svg>
+            </button>
+          </div>
+        </template>
+
+        <template x-if="!currentlyPlayingTrack">
+          <div class="flex items-center gap-1.5 text-gray-500 text-xs font-medium">
+            <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>Playback Idle</span>
+          </div>
         </template>
       </div>
-    </template>
-
-    <template x-if="loading || isBatchRunning">
-      <div class="h-4 w-[1px] bg-cyan-700/60"></div>
-    </template>
-
-    <!-- CPU Monitoring -->
-    <div class="flex items-center gap-1.5" title="Real-time CPU Utilization">
-      <span class="text-[10px] text-cyan-400 font-bold tracking-wider uppercase">CPU</span>
-      <div class="w-10 h-1.5 bg-gray-800 rounded-full overflow-hidden border border-gray-700/50">
-        <div class="h-full transition-all duration-500" :class="cpu > 80 ? 'bg-red-500' : (cpu > 50 ? 'bg-yellow-500' : 'bg-cyan-400')" :style="`width: ${cpu}%`"></div>
-      </div>
-      <span class="text-[10px] font-mono font-bold text-gray-200 w-6 text-right" x-text="`${cpu}%`"></span>
     </div>
 
-    <div class="h-4 w-[1px] bg-gray-700/70"></div>
-
-    <!-- GPU Monitoring -->
-    <div class="flex items-center gap-1.5" title="Real-time GPU Utilization (NVIDIA RTX)">
-      <span class="text-[10px] text-purple-400 font-bold tracking-wider uppercase">GPU</span>
-      <div class="w-10 h-1.5 bg-gray-800 rounded-full overflow-hidden border border-gray-700/50">
-        <div class="h-full transition-all duration-500" :class="gpu > 80 ? 'bg-red-500' : (gpu > 50 ? 'bg-yellow-500' : 'bg-purple-400')" :style="`width: ${gpu}%`"></div>
-      </div>
-      <span class="text-[10px] font-mono font-bold text-gray-200 w-6 text-right" x-text="`${gpu}%`"></span>
-    </div>
-
-    <div class="h-4 w-[1px] bg-gray-700/70"></div>
-
-    <!-- Master Playback HUD Controls -->
-    <div class="flex items-center gap-2">
-      <template x-if="currentlyPlayingTrack">
-        <div class="flex items-center gap-2">
-          <!-- Animated sound wave indicator -->
-          <div class="flex items-center gap-0.5 text-cyan-400" title="Audio is playing">
-            <span class="w-1 h-3 bg-cyan-400 animate-pulse rounded-full"></span>
-            <span class="w-1 h-4 bg-cyan-400 animate-pulse delay-75 rounded-full"></span>
-            <span class="w-1 h-2 bg-cyan-400 animate-pulse delay-150 rounded-full"></span>
-          </div>
-          
-          <span class="text-xs font-bold text-white max-w-[90px] sm:max-w-[130px] truncate" x-text="currentlyPlayingTitle" :title="currentlyPlayingTitle"></span>
-
-          <!-- Rewind 10s -->
-          <button @click="rewindAudio(10)" class="p-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-cyan-400 transition shadow flex items-center justify-center" title="Rewind 10 seconds (-10s)">
-            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>
-          </button>
-
-          <!-- Pause / Resume Toggle -->
-          <button @click="toggleGlobalPlayback()" class="p-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white transition shadow flex items-center justify-center" :title="isPlaying ? 'Pause playback' : 'Resume playback'">
-            <template x-if="isPlaying">
-              <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-            </template>
-            <template x-if="!isPlaying">
-              <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-            </template>
-          </button>
-
-          <!-- Forward 10s -->
-          <button @click="forwardAudio(10)" class="p-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-cyan-400 transition shadow flex items-center justify-center" title="Forward 10 seconds (+10s)">
-            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
-          </button>
-
-          <!-- Interactive Scrubber & Timeline -->
-          <div class="flex items-center gap-1.5 bg-gray-900/80 px-2 py-1 rounded-xl border border-gray-800">
-            <span class="text-[10px] font-mono text-gray-300 w-7 text-right" x-text="formatTime(audioCurrentTime)"></span>
-            <input type="range" min="0" :max="audioDuration || 100" step="0.25" :value="audioCurrentTime" @input="seekAudio($event)" class="w-16 sm:w-28 h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-400 hover:accent-cyan-300" title="Scrub / Scroll audio position">
-            <span class="text-[10px] font-mono text-gray-500 w-7" x-text="formatTime(audioDuration)"></span>
-          </div>
-
-          <!-- Volume Slider -->
-          <div class="hidden md:flex items-center gap-1 text-gray-400" title="Master Volume">
-            <svg class="w-3.5 h-3.5 text-cyan-400" fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
-            <input type="range" min="0" max="1" step="0.05" x-model="audioVolume" @input="if ($refs.masterAudio) $refs.masterAudio.volume = audioVolume" class="w-14 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-400" title="Volume">
-          </div>
-
-          <!-- Stop Button -->
-          <button @click="stopAudio()" class="p-1.5 rounded-lg bg-red-600/30 hover:bg-red-600/60 text-red-300 border border-red-500/40 transition flex items-center justify-center shadow" title="Stop playback">
-            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
-          </button>
-        </div>
-      </template>
-
-      <template x-if="!currentlyPlayingTrack">
-        <div class="flex items-center gap-1.5 text-gray-500 text-xs font-medium">
-          <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          <span>Playback Idle</span>
-        </div>
-      </template>
-    </div>
-  </div>
-
-  <div class="max-w-7xl mx-auto relative z-10 pt-2">
-    <!-- Top Row: Brand & Logo, Input Source, and Output Destination -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-8">
-      
-      <!-- LEFT BRAND & LOGO CARD (lg:col-span-3) -->
-      <div class="lg:col-span-3 bg-gray-800/70 backdrop-blur-md rounded-2xl p-4 shadow-2xl border border-cyan-500/30 flex flex-col justify-between">
-        <div class="flex items-center gap-3.5">
-          <div class="relative group shrink-0">
-            <div class="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-500"></div>
-            <img src="/Moondiver_Logo.jpg" alt="Moondiver Studio Logo" class="relative w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-2xl border border-cyan-400/60 shadow-2xl">
-          </div>
-          <div class="flex-1 min-w-0">
-            <h1 class="text-xl sm:text-2xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 leading-tight">
-              Moondiver
-            </h1>
-            <span class="text-xs font-bold uppercase tracking-wider text-purple-300/90 block">Mastering Studio</span>
-            <span class="text-[10px] text-gray-500 font-mono block mt-0.5">v1.2.0 • 24-bit DSP</span>
-          </div>
-        </div>
-        <div class="mt-3 pt-2.5 border-t border-gray-700/50 text-[11px] text-gray-400 font-light leading-snug">
-          Automated Stem Separation, Analog Warmth Mixing, Two-Pass Linear Mastering & Album Sequencing
-        </div>
-      </div>
-
-      <!-- CENTER CARD: Input Audio Source (lg:col-span-4) -->
-      <div class="lg:col-span-4 bg-gray-800/70 backdrop-blur-md rounded-2xl p-4 shadow-2xl border border-cyan-500/40 flex flex-col justify-between">
-        <div>
-          <div class="flex items-center justify-between mb-3 border-b border-gray-700/60 pb-2">
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
-              <h3 class="text-sm font-bold uppercase tracking-wider text-cyan-300">1. Input Audio Source</h3>
+    <div class="max-w-7xl mx-auto relative z-10 pt-2">
+      <!-- Top Row: Brand & Logo, Input Source, and Output Destination -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-8">
+        <!-- LEFT BRAND & LOGO CARD (lg:col-span-3) -->
+        <div
+          class="lg:col-span-3 bg-gray-800/70 backdrop-blur-md rounded-2xl p-4 shadow-2xl border border-cyan-500/30 flex flex-col justify-between"
+        >
+          <div class="flex items-center gap-3.5">
+            <div class="relative group shrink-0">
+              <div
+                class="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-500"
+              ></div>
+              <img
+                src="/Moondiver_Logo.jpg"
+                alt="Moondiver Studio Logo"
+                class="relative w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-2xl border border-cyan-400/60 shadow-2xl"
+              />
             </div>
-            <!-- Quick Album Dropdown -->
-            <select x-model="selectedAlbum" @change="onAlbumSelected()" class="bg-[#111827] border border-gray-600 rounded px-2 py-1 text-xs text-cyan-300 focus:outline-none focus:border-cyan-500" title="Quickly pick an album project from E:\Music Projects">
-              <option value="">Quick Pick Album...</option>
-              <template x-for="alb in albumList" :key="alb.name">
-                <option :value="alb.path" x-text="alb.name"></option>
-              </template>
-            </select>
-          </div>
-
-          <label class="block text-xs font-medium text-gray-400 mb-1.5" title="Directory containing original Suno exports (.wav)">
-            Input Path (suno_exports)
-          </label>
-          <div class="flex items-center gap-2">
-            <div class="relative flex-1">
-              <input type="text" x-model="targetPath" @keydown.enter="scanFolder()" class="w-full bg-[#111827] border border-gray-600 rounded-lg py-2 pl-3 pr-3 text-cyan-300 font-mono text-xs focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition shadow" placeholder="E:\Music Projects\Frozen Time\suno_exports" title="Path to raw suno_exports folder">
+            <div class="flex-1 min-w-0">
+              <h1
+                class="text-xl sm:text-2xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 leading-tight"
+              >
+                Moondiver
+              </h1>
+              <span class="text-xs font-bold uppercase tracking-wider text-purple-300/90 block">Mastering Studio</span>
+              <span class="text-[10px] text-gray-500 font-mono block mt-0.5">v1.2.0 • 24-bit DSP</span>
             </div>
-            <button @click="openFolderModal('input')" :disabled="loading" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-2.5 rounded-lg text-xs shadow transition flex items-center gap-1" title="Browse for input suno_exports directory">
-              <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
-              Browse
-            </button>
-            <button @click="scanFolder()" :disabled="loading" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-3 rounded-lg text-xs shadow transition flex items-center gap-1" title="Scan directory for tracks">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-              Scan
-            </button>
+          </div>
+          <div class="mt-3 pt-2.5 border-t border-gray-700/50 text-[11px] text-gray-400 font-light leading-snug">
+            Automated Stem Separation, Analog Warmth Mixing, Two-Pass Linear Mastering & Album Sequencing
           </div>
         </div>
 
-        <div class="mt-3 pt-2.5 border-t border-gray-700/40 flex items-center justify-between text-[11px]">
-          <span class="text-gray-400">Status:</span>
-          <template x-if="tracks.length > 0">
-            <span class="text-cyan-300 font-medium flex items-center gap-1 font-mono">
-              <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-              <span x-text="`${tracks.length} raw tracks detected`"></span>
-            </span>
-          </template>
-          <template x-if="tracks.length === 0">
-            <span class="text-gray-500 italic">No tracks loaded</span>
-          </template>
-        </div>
-      </div>
-
-      <!-- RIGHT CARD: Output Destination (lg:col-span-5) -->
-      <div class="lg:col-span-5 bg-gray-800/70 backdrop-blur-md rounded-2xl p-4 shadow-2xl border border-emerald-500/40 flex flex-col justify-between">
-        <div>
-          <div class="flex items-center justify-between mb-3 border-b border-gray-700/60 pb-2 flex-wrap gap-2">
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-300">2. Output Destination (Masters)</h3>
-            </div>
-            
-            <!-- Version Quick-Switch & New Version Button -->
-            <div class="flex items-center gap-2">
-              <span class="text-[11px] text-gray-400">Version:</span>
-              <select x-model="currentVersion" @change="onVersionSelected()" class="bg-[#111827] border border-emerald-500/60 rounded px-2 py-1 text-xs text-emerald-300 font-mono focus:outline-none focus:border-emerald-400" title="Select which master version folder to store masters in">
-                <template x-for="ver in availableVersions" :key="ver">
-                  <option :value="ver" x-text="ver"></option>
+        <!-- CENTER CARD: Input Audio Source (lg:col-span-4) -->
+        <div
+          class="lg:col-span-4 bg-gray-800/70 backdrop-blur-md rounded-2xl p-4 shadow-2xl border border-cyan-500/40 flex flex-col justify-between"
+        >
+          <div>
+            <div class="flex items-center justify-between mb-3 border-b border-gray-700/60 pb-2">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                <h3 class="text-sm font-bold uppercase tracking-wider text-cyan-300">1. Input Audio Source</h3>
+              </div>
+              <!-- Quick Album Dropdown -->
+              <select
+                x-model="selectedAlbum"
+                @change="onAlbumSelected()"
+                class="bg-[#111827] border border-gray-600 rounded px-2 py-1 text-xs text-cyan-300 focus:outline-none focus:border-cyan-500"
+                title="Quickly pick an album project from E:\Music Projects"
+              >
+                <option value="">Quick Pick Album...</option>
+                <template x-for="alb in albumList" :key="alb.name">
+                  <option :value="alb.path" x-text="alb.name"></option>
                 </template>
               </select>
-              <button @click="createNewVersion()" :disabled="loading" class="bg-gray-700 hover:bg-emerald-700 text-gray-200 hover:text-white px-2 py-1 rounded text-xs transition flex items-center gap-1 border border-gray-600" title="Create a new version folder (e.g. mastered_versions_v1) to keep previous masters safe">
-                <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                + New Version
+            </div>
+
+            <label
+              class="block text-xs font-medium text-gray-400 mb-1.5"
+              title="Directory containing original Suno exports (.wav)"
+            >
+              Input Path (suno_exports)
+            </label>
+            <div class="flex items-center gap-2">
+              <div class="relative flex-1">
+                <input
+                  type="text"
+                  x-model="targetPath"
+                  @keydown.enter="scanFolder()"
+                  class="w-full bg-[#111827] border border-gray-600 rounded-lg py-2 pl-3 pr-3 text-cyan-300 font-mono text-xs focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition shadow"
+                  placeholder="E:\Music Projects\Frozen Time\suno_exports"
+                  title="Path to raw suno_exports folder"
+                />
+              </div>
+              <button
+                @click="openFolderModal('input')"
+                :disabled="loading"
+                class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-2.5 rounded-lg text-xs shadow transition flex items-center gap-1"
+                title="Browse for input suno_exports directory"
+              >
+                <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                  ></path>
+                </svg>
+                Browse
+              </button>
+              <button
+                @click="scanFolder()"
+                :disabled="loading"
+                class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-3 rounded-lg text-xs shadow transition flex items-center gap-1"
+                title="Scan directory for tracks"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  ></path>
+                </svg>
+                Scan
               </button>
             </div>
           </div>
 
-          <label class="block text-xs font-medium text-gray-400 mb-1.5" title="Destination folder where 24-bit WAV, MP3, and playlists will be saved">
-            Output Path (wav/ & mp3/ will be created here)
-          </label>
-          <div class="flex items-center gap-2">
-            <div class="relative flex-1">
-              <input type="text" x-model="outputFolder" @change="onOutputFolderManualChange()" class="w-full bg-[#111827] border border-gray-600 rounded-lg py-2 pl-3 pr-3 text-emerald-300 font-mono text-xs focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition shadow" placeholder="E:\Music Projects\Frozen Time\mastered_versions_v1" title="Destination path for finished studio masters">
-            </div>
-            <button @click="openFolderModal('output')" :disabled="loading" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-3 rounded-lg text-xs shadow transition flex items-center gap-1.5" title="Browse for custom output folder">
-              <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
-              Browse
-            </button>
+          <div class="mt-3 pt-2.5 border-t border-gray-700/40 flex items-center justify-between text-[11px]">
+            <span class="text-gray-400">Status:</span>
+            <template x-if="tracks.length > 0">
+              <span class="text-cyan-300 font-medium flex items-center gap-1 font-mono">
+                <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span x-text="`${tracks.length} raw tracks detected`"></span>
+              </span>
+            </template>
+            <template x-if="tracks.length === 0">
+              <span class="text-gray-500 italic">No tracks loaded</span>
+            </template>
           </div>
         </div>
 
-        <div class="mt-3 pt-2.5 border-t border-gray-700/40 flex items-center justify-between text-[11px] flex-wrap gap-2">
-          <span class="text-gray-400">Content Status:</span>
-          <template x-if="existingOutputCount > 0">
-            <span class="text-amber-400 font-medium flex items-center gap-1">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-              <span x-text="`${existingOutputCount} existing master file(s) found`"></span>
-              <span class="text-gray-500 font-normal" x-text="acknowledgedFolders[outputFolder] ? '(Acknowledged)' : ''"></span>
-            </span>
-          </template>
-          <template x-if="existingOutputCount === 0">
-            <span class="text-emerald-400 font-medium flex items-center gap-1">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-              Clean Folder (Ready for fresh masters)
-            </span>
-          </template>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Safety Warning / Acknowledge Modal -->
-    <div x-show="showWarningModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" style="display: none;">
-      <div class="bg-gray-900 border border-amber-500/60 rounded-2xl max-w-lg w-full p-6 shadow-2xl text-left transform transition-all">
-        <div class="flex items-center gap-3 text-amber-400 mb-4">
-          <div class="p-2 bg-amber-500/20 rounded-xl">
-            <svg class="w-7 h-7 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-          </div>
+        <!-- RIGHT CARD: Output Destination (lg:col-span-5) -->
+        <div
+          class="lg:col-span-5 bg-gray-800/70 backdrop-blur-md rounded-2xl p-4 shadow-2xl border border-emerald-500/40 flex flex-col justify-between"
+        >
           <div>
-            <h3 class="text-lg font-bold text-white">Existing Files Detected in Output Folder</h3>
-            <p class="text-xs text-gray-400">Please confirm your target directory before mastering</p>
-          </div>
-        </div>
-
-        <p class="text-gray-300 text-sm mb-3">
-          The selected output destination already contains <span class="text-amber-400 font-bold" x-text="existingOutputCount"></span> audio master files:
-        </p>
-
-        <div class="bg-gray-950 p-3 rounded-lg border border-gray-800 font-mono text-xs text-amber-300 break-all mb-4" x-text="outputFolder"></div>
-
-        <p class="text-gray-400 text-xs mb-6 leading-relaxed">
-          Proceeding will write into this folder. If previous masters should remain untouched, click <span class="text-emerald-400 font-semibold">"Create New Version Folder"</span> to automatically create a clean version (e.g. <span class="font-mono text-gray-300">mastered_versions_v...</span>).
-        </p>
-
-        <div class="flex flex-col sm:flex-row justify-end gap-3">
-          <button @click="createNewVersion(); showWarningModal = false;" class="bg-gray-800 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg text-xs transition flex items-center justify-center gap-2 border border-gray-600 shadow">
-            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Create New Version Instead
-          </button>
-          <button @click="acknowledgeWarning()" class="bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white font-bold py-2.5 px-5 rounded-lg text-xs transition shadow-lg flex items-center justify-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-            I Understand & Acknowledge
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- In-App Folder Navigator Modal -->
-    <div x-show="showFolderModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" style="display: none;">
-      <div class="bg-gray-900 border border-cyan-500/60 rounded-2xl max-w-xl w-full p-6 shadow-2xl text-left transform transition-all flex flex-col max-h-[85vh]">
-        <!-- Modal Header -->
-        <div class="flex items-center justify-between pb-3 border-b border-gray-800">
-          <div class="flex items-center gap-2">
-            <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
-            <h3 class="text-base font-bold text-white" x-text="browseTargetType === 'input' ? 'Select Input Folder (suno_exports)' : 'Select Output Folder (mastered_versions)'"></h3>
-          </div>
-          <button @click="showFolderModal = false" class="text-gray-400 hover:text-white text-lg font-bold">✕</button>
-        </div>
-
-        <!-- Current Path & Up Button -->
-        <div class="mt-3 mb-2 flex items-center gap-2">
-          <button @click="navigateFolderUp()" :disabled="!modalParentPath" class="bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed text-cyan-300 font-bold px-3 py-1.5 rounded-lg text-xs border border-gray-700 flex items-center gap-1 shadow" title="Go up one folder level">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
-            Up
-          </button>
-          <div class="flex-1 bg-gray-950 px-3 py-1.5 rounded-lg border border-gray-800 text-xs font-mono text-cyan-300 truncate" x-text="modalCurrentPath" :title="modalCurrentPath"></div>
-        </div>
-
-        <!-- Directory List -->
-        <div class="flex-1 overflow-y-auto bg-[#0a0f1d] border border-gray-800 rounded-xl p-2 my-2 space-y-1 min-h-[220px] max-h-[350px]">
-          <template x-if="modalDirectories.length === 0">
-            <div class="p-4 text-center text-xs text-gray-500 italic">No subdirectories in this folder</div>
-          </template>
-          <template x-for="dir in modalDirectories" :key="dir">
-            <div @click="loadDirectory(modalCurrentPath + '\\' + dir)" class="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-800/80 cursor-pointer text-xs text-gray-200 group transition">
+            <div class="flex items-center justify-between mb-3 border-b border-gray-700/60 pb-2 flex-wrap gap-2">
               <div class="flex items-center gap-2">
-                <svg class="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
-                <span class="font-medium group-hover:text-cyan-300" x-text="dir"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-300">
+                  2. Output Destination (Masters)
+                </h3>
               </div>
-              <svg class="w-4 h-4 text-gray-600 group-hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-            </div>
-          </template>
-        </div>
 
-        <!-- Footer Actions -->
-        <div class="pt-3 border-t border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <button @click="triggerOsBrowseDialog()" class="text-xs text-gray-400 hover:text-cyan-300 flex items-center gap-1.5 underline" title="Open native Windows FolderBrowserDialog">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-            Open Windows File Dialog
-          </button>
-          <div class="flex items-center gap-2">
-            <button @click="showFolderModal = false" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-lg text-xs font-semibold">
-              Cancel
-            </button>
-            <button @click="selectFolderFromModal()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-5 py-2 rounded-lg text-xs shadow-lg flex items-center gap-1.5">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-              Select This Folder
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Batch Processing Table -->
-    <div x-show="tracks.length > 0" class="bg-gray-800/60 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-700/50 mb-8 overflow-x-auto" style="display: none;">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-700/50 pb-4 gap-4">
-        <div class="flex items-center gap-3">
-          <h2 class="text-xl font-semibold text-white flex items-center gap-2">
-            <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-            Album Tracks
-          </h2>
-          <span class="text-xs bg-gray-700 text-gray-300 px-2.5 py-0.5 rounded-full font-mono" x-text="`${tracks.length} tracks`"></span>
-        </div>
-
-        <!-- Global Actions Above Table -->
-        <div class="flex flex-col sm:flex-row items-center gap-2.5 flex-wrap">
-          <button @click="batchDirectMasterAll()" :disabled="!isReadyToProcess() || isBatchRunning" class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-2 px-3.5 text-xs sm:text-sm rounded-lg shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5" title="Pure Two-Pass Linear Mastering directly from raw audio without AI stem separation (Zero phase cancellation, pristine acoustic clarity)">
-            <svg class="w-4 h-4 text-cyan-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            ✨ Pure Direct Master All (Pristine)
-          </button>
-          <button @click="batchRemixAndMasterAll()" :disabled="!isReadyToProcess() || isBatchRunning" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 px-3.5 text-xs sm:text-sm rounded-lg shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5" title="Split Stems with AI Demucs, Re-mix, Re-master, and Re-generate Quality Reports">
-            <svg class="w-4 h-4 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            ⚡ Stem Re-Mix & Master All
-          </button>
-          <button @click="batchProcessMissing()" :disabled="!isReadyToProcess() || isBatchRunning" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-3 text-xs sm:text-sm rounded-lg shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5" :title="isReadyToProcess() ? 'Process only missing Split, Mix, and Master steps sequentially' : 'Please specify both Input and Output folders before processing'">
-            <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-            Process Missing
-          </button>
-          <button @click="runGlobalSequence()" :disabled="!isReadyToProcess() || tracks.some(t => !t.hasMastered) || isBatchRunning" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2 px-3.5 text-xs sm:text-sm rounded-lg shadow-lg transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5" :title="isReadyToProcess() ? (tracks.some(t => !t.hasMastered) ? 'All tracks must be mastered before sequencing' : 'Sequence album into dramatic arc, tag metadata, and generate playlists') : 'Please specify both Input and Output folders before sequencing'">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
-            5. Sequence Album
-          </button>
-
-          <!-- Stop Batch Button -->
-          <template x-if="isBatchRunning">
-            <button @click="stopBatchProcessing()" :disabled="abortRequested" class="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold py-2 px-4 text-xs sm:text-sm rounded-lg shadow-lg shadow-red-500/20 transition flex items-center gap-1.5 animate-pulse" title="Cancel/Stop batch processing after the current track finishes">
-              <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
-              <span x-text="abortRequested ? 'Aborting Batch...' : '⏹ Stop Batch'"></span>
-            </button>
-          </template>
-        </div>
-      </div>
-      
-      <table class="w-full text-left border-collapse">
-        <thead>
-          <tr>
-            <th colspan="3" class="border-b border-gray-700/80"></th>
-            <th colspan="4" class="px-2 pb-2 pt-2 border-b border-gray-700/80">
-              <div class="h-1.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 via-cyan-500 to-emerald-500 rounded-full opacity-80" title="4-Step DSP Pipeline: Analyze -> Split -> Mix -> Master"></div>
-            </th>
-            <th colspan="2" class="border-b border-gray-700/80"></th>
-          </tr>
-          <tr class="text-gray-400 text-sm border-b border-gray-700/80">
-            <th class="py-3 px-2" title="Audio track filename">Track Name</th>
-            <th class="py-3 px-1 text-center w-12" title="Listen to original raw Suno export">Raw</th>
-            <th class="py-2 px-2 w-44">
-              <div class="flex flex-col gap-1 w-44">
-                <span class="text-xs text-gray-300 font-semibold truncate" title="Target Acoustic Genre Profile">DSP Profile (Set all...)</span>
-                <select x-model="globalPreset" @change="applyGlobalPreset()" class="w-full bg-[#111827] border border-cyan-500/50 hover:border-cyan-400 rounded px-2 py-1 text-xs text-cyan-300 font-medium focus:outline-none focus:border-cyan-400 shadow transition" title="Choose a DSP profile here to apply it to all tracks simultaneously">
-                  <template x-for="[key, p] in Object.entries(presets)" :key="key">
-                    <option :value="key" x-text="p.name" :selected="key === globalPreset"></option>
+              <!-- Version Quick-Switch & New Version Button -->
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] text-gray-400">Version:</span>
+                <select
+                  x-model="currentVersion"
+                  @change="onVersionSelected()"
+                  class="bg-[#111827] border border-emerald-500/60 rounded px-2 py-1 text-xs text-emerald-300 font-mono focus:outline-none focus:border-emerald-400"
+                  title="Select which master version folder to store masters in"
+                >
+                  <template x-for="ver in availableVersions" :key="ver">
+                    <option :value="ver" x-text="ver"></option>
                   </template>
                 </select>
-              </div>
-            </th>
-            <!-- Step 1: Analyze -->
-            <th class="py-3 px-2 text-center bg-indigo-900/10">
-              <button @click="batchProcessColumn('analyze')" :disabled="!isReadyToProcess()" class="w-full flex flex-col items-center gap-1 hover:text-indigo-400 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed" title="Step 1: Analyze raw audio (LUFS, True Peak, LRA, Spectral DNA)">
-                <span class="text-indigo-300">1. Analyze</span>
-                <span class="text-[10px] bg-gray-700 group-hover:bg-indigo-600/50 text-white px-2 py-0.5 rounded shadow">All</span>
-              </button>
-            </th>
-            <!-- Step 2: Split -->
-            <th class="py-3 px-2 text-center bg-purple-900/10">
-              <button @click="batchProcessColumn('split')" :disabled="!isReadyToProcess()" class="w-full flex flex-col items-center gap-1 hover:text-purple-400 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed" title="Step 2: Separate vocals, bass, drums, other stems using Demucs AI">
-                <span class="text-purple-300">2. Split</span>
-                <span class="text-[10px] bg-gray-700 group-hover:bg-purple-600/50 text-white px-2 py-0.5 rounded shadow">All</span>
-              </button>
-            </th>
-            <!-- Step 3: Mix -->
-            <th class="py-3 px-2 text-center bg-cyan-900/10">
-              <button @click="batchProcessColumn('mix')" :disabled="!isReadyToProcess()" class="w-full flex flex-col items-center gap-1 hover:text-cyan-400 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed" title="Step 3: Auto-mix stems with analog warmth and de-mudding">
-                <span class="text-cyan-300">3. Mix</span>
-                <span class="text-[10px] bg-gray-700 group-hover:bg-cyan-600/50 text-white px-2 py-0.5 rounded shadow">All</span>
-              </button>
-            </th>
-            <!-- Step 4: Master -->
-            <th class="py-3 px-2 text-center bg-emerald-900/10">
-              <button @click="batchProcessColumn('master')" :disabled="!isReadyToProcess()" class="w-full flex flex-col items-center gap-1 hover:text-emerald-400 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed" title="Step 4: Two-Pass Linear Mastering (EBU R128 -16 LUFS)">
-                <span class="text-emerald-300">4. Master</span>
-                <span class="text-[10px] bg-gray-700 group-hover:bg-emerald-600/50 text-white px-2 py-0.5 rounded shadow">All</span>
-              </button>
-            </th>
-            <!-- Quality Report Header with Report All button directly below -->
-            <th class="py-2 px-3 text-left">
-              <div class="flex flex-col gap-1 items-start">
-                <span class="text-xs text-gray-300 font-semibold" title="Quality KPIs, Apple Music compliance, and applied DSP filters">Quality Report</span>
-                <button @click="batchProcessQualityReport()" :disabled="!isReadyToProcess() || !tracks.some(t => t.hasMastered)" class="text-[10px] bg-gray-700 hover:bg-emerald-600/60 text-white px-2.5 py-0.5 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed font-semibold" title="Generate Quality Report for all mastered tracks">
-                  Report All
+                <button
+                  @click="createNewVersion()"
+                  :disabled="loading"
+                  class="bg-gray-700 hover:bg-emerald-700 text-gray-200 hover:text-white px-2 py-1 rounded text-xs transition flex items-center gap-1 border border-gray-600"
+                  title="Create a new version folder (e.g. mastered_versions_v1) to keep previous masters safe"
+                >
+                  <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                  + New Version
                 </button>
               </div>
-            </th>
-            <!-- Master Playback Header at the very end -->
-            <th class="py-3 px-1 text-center w-14" title="Listen to finished 24-bit studio master">Master</th>
-          </tr>
-        </thead>
-        <tbody>
-          <template x-for="(track, index) in tracks" :key="track.name">
-              <tr class="border-b border-gray-700/30 hover:bg-gray-700/20 transition-colors" :class="track.isProcessing ? 'bg-gray-700/40 animate-pulse' : ''">
+            </div>
+
+            <label
+              class="block text-xs font-medium text-gray-400 mb-1.5"
+              title="Destination folder where 24-bit WAV, MP3, and playlists will be saved"
+            >
+              Output Path (wav/ & mp3/ will be created here)
+            </label>
+            <div class="flex items-center gap-2">
+              <div class="relative flex-1">
+                <input
+                  type="text"
+                  x-model="outputFolder"
+                  @change="onOutputFolderManualChange()"
+                  class="w-full bg-[#111827] border border-gray-600 rounded-lg py-2 pl-3 pr-3 text-emerald-300 font-mono text-xs focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition shadow"
+                  placeholder="E:\Music Projects\Frozen Time\mastered_versions_v1"
+                  title="Destination path for finished studio masters"
+                />
+              </div>
+              <button
+                @click="openFolderModal('output')"
+                :disabled="loading"
+                class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-3 rounded-lg text-xs shadow transition flex items-center gap-1.5"
+                title="Browse for custom output folder"
+              >
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                  ></path>
+                </svg>
+                Browse
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="mt-3 pt-2.5 border-t border-gray-700/40 flex items-center justify-between text-[11px] flex-wrap gap-2"
+          >
+            <span class="text-gray-400">Content Status:</span>
+            <template x-if="existingOutputCount > 0">
+              <span class="text-amber-400 font-medium flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  ></path>
+                </svg>
+                <span x-text="`${existingOutputCount} existing master file(s) found`"></span>
+                <span
+                  class="text-gray-500 font-normal"
+                  x-text="acknowledgedFolders[outputFolder] ? '(Acknowledged)' : ''"
+                ></span>
+              </span>
+            </template>
+            <template x-if="existingOutputCount === 0">
+              <span class="text-emerald-400 font-medium flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Clean Folder (Ready for fresh masters)
+              </span>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Safety Warning / Acknowledge Modal -->
+      <div
+        x-show="showWarningModal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+        style="display: none"
+      >
+        <div
+          class="bg-gray-900 border border-amber-500/60 rounded-2xl max-w-lg w-full p-6 shadow-2xl text-left transform transition-all"
+        >
+          <div class="flex items-center gap-3 text-amber-400 mb-4">
+            <div class="p-2 bg-amber-500/20 rounded-xl">
+              <svg class="w-7 h-7 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                ></path>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-white">Existing Files Detected in Output Folder</h3>
+              <p class="text-xs text-gray-400">Please confirm your target directory before mastering</p>
+            </div>
+          </div>
+
+          <p class="text-gray-300 text-sm mb-3">
+            The selected output destination already contains
+            <span class="text-amber-400 font-bold" x-text="existingOutputCount"></span> audio master files:
+          </p>
+
+          <div
+            class="bg-gray-950 p-3 rounded-lg border border-gray-800 font-mono text-xs text-amber-300 break-all mb-4"
+            x-text="outputFolder"
+          ></div>
+
+          <p class="text-gray-400 text-xs mb-6 leading-relaxed">
+            Proceeding will write into this folder. If previous masters should remain untouched, click
+            <span class="text-emerald-400 font-semibold">"Create New Version Folder"</span> to automatically create a
+            clean version (e.g. <span class="font-mono text-gray-300">mastered_versions_v...</span>).
+          </p>
+
+          <div class="flex flex-col sm:flex-row justify-end gap-3">
+            <button
+              @click="createNewVersion(); showWarningModal = false;"
+              class="bg-gray-800 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg text-xs transition flex items-center justify-center gap-2 border border-gray-600 shadow"
+            >
+              <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Create New Version Instead
+            </button>
+            <button
+              @click="acknowledgeWarning()"
+              class="bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white font-bold py-2.5 px-5 rounded-lg text-xs transition shadow-lg flex items-center justify-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              I Understand & Acknowledge
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- In-App Folder Navigator Modal -->
+      <div
+        x-show="showFolderModal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+        style="display: none"
+      >
+        <div
+          class="bg-gray-900 border border-cyan-500/60 rounded-2xl max-w-xl w-full p-6 shadow-2xl text-left transform transition-all flex flex-col max-h-[85vh]"
+        >
+          <!-- Modal Header -->
+          <div class="flex items-center justify-between pb-3 border-b border-gray-800">
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                ></path>
+              </svg>
+              <h3
+                class="text-base font-bold text-white"
+                x-text="browseTargetType === 'input' ? 'Select Input Folder (suno_exports)' : 'Select Output Folder (mastered_versions)'"
+              ></h3>
+            </div>
+            <button @click="showFolderModal = false" class="text-gray-400 hover:text-white text-lg font-bold">✕</button>
+          </div>
+
+          <!-- Current Path & Up Button -->
+          <div class="mt-3 mb-2 flex items-center gap-2">
+            <button
+              @click="navigateFolderUp()"
+              :disabled="!modalParentPath"
+              class="bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed text-cyan-300 font-bold px-3 py-1.5 rounded-lg text-xs border border-gray-700 flex items-center gap-1 shadow"
+              title="Go up one folder level"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 10l7-7m0 0l7 7m-7-7v18"
+                ></path>
+              </svg>
+              Up
+            </button>
+            <div
+              class="flex-1 bg-gray-950 px-3 py-1.5 rounded-lg border border-gray-800 text-xs font-mono text-cyan-300 truncate"
+              x-text="modalCurrentPath"
+              :title="modalCurrentPath"
+            ></div>
+          </div>
+
+          <!-- Directory List -->
+          <div
+            class="flex-1 overflow-y-auto bg-[#0a0f1d] border border-gray-800 rounded-xl p-2 my-2 space-y-1 min-h-[220px] max-h-[350px]"
+          >
+            <template x-if="modalDirectories.length === 0">
+              <div class="p-4 text-center text-xs text-gray-500 italic">No subdirectories in this folder</div>
+            </template>
+            <template x-for="dir in modalDirectories" :key="dir">
+              <div
+                @click="loadDirectory(modalCurrentPath + '\\' + dir)"
+                class="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-800/80 cursor-pointer text-xs text-gray-200 group transition"
+              >
+                <div class="flex items-center gap-2">
+                  <svg
+                    class="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"
+                    />
+                  </svg>
+                  <span class="font-medium group-hover:text-cyan-300" x-text="dir"></span>
+                </div>
+                <svg
+                  class="w-4 h-4 text-gray-600 group-hover:text-gray-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </div>
+            </template>
+          </div>
+
+          <!-- Footer Actions -->
+          <div class="pt-3 border-t border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <button
+              @click="triggerOsBrowseDialog()"
+              class="text-xs text-gray-400 hover:text-cyan-300 flex items-center gap-1.5 underline"
+              title="Open native Windows FolderBrowserDialog"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                ></path>
+              </svg>
+              Open Windows File Dialog
+            </button>
+            <div class="flex items-center gap-2">
+              <button
+                @click="showFolderModal = false"
+                class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-lg text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                @click="selectFolderFromModal()"
+                class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-5 py-2 rounded-lg text-xs shadow-lg flex items-center gap-1.5"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Select This Folder
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Batch Processing Table -->
+      <div
+        x-show="tracks.length > 0"
+        class="bg-gray-800/60 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-700/50 mb-8 overflow-x-auto"
+        style="display: none"
+      >
+        <div
+          class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-700/50 pb-4 gap-4"
+        >
+          <div class="flex items-center gap-3">
+            <h2 class="text-xl font-semibold text-white flex items-center gap-2">
+              <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                ></path>
+              </svg>
+              Album Tracks
+            </h2>
+            <span
+              class="text-xs bg-gray-700 text-gray-300 px-2.5 py-0.5 rounded-full font-mono"
+              x-text="`${tracks.length} tracks`"
+            ></span>
+          </div>
+
+          <!-- Global Actions Above Table -->
+          <div class="flex flex-col sm:flex-row items-center gap-2.5 flex-wrap">
+            <button
+              @click="batchDirectMasterAll()"
+              :disabled="!isReadyToProcess() || isBatchRunning"
+              class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-2 px-3.5 text-xs sm:text-sm rounded-lg shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+              title="Pure Two-Pass Linear Mastering directly from raw audio without AI stem separation (Zero phase cancellation, pristine acoustic clarity)"
+            >
+              <svg class="w-4 h-4 text-cyan-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              ✨ Pure Direct Master All (Pristine)
+            </button>
+            <button
+              @click="batchRemixAndMasterAll()"
+              :disabled="!isReadyToProcess() || isBatchRunning"
+              class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 px-3.5 text-xs sm:text-sm rounded-lg shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+              title="Split Stems with AI Demucs, Re-mix, Re-master, and Re-generate Quality Reports"
+            >
+              <svg class="w-4 h-4 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              ⚡ Stem Re-Mix & Master All
+            </button>
+            <button
+              @click="batchProcessMissing()"
+              :disabled="!isReadyToProcess() || isBatchRunning"
+              class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-3 text-xs sm:text-sm rounded-lg shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+              :title="isReadyToProcess() ? 'Process only missing Split, Mix, and Master steps sequentially' : 'Please specify both Input and Output folders before processing'"
+            >
+              <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                ></path>
+              </svg>
+              Process Missing
+            </button>
+            <button
+              @click="runGlobalSequence()"
+              :disabled="!isReadyToProcess() || tracks.some(t => !t.hasMastered) || isBatchRunning"
+              class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2 px-3.5 text-xs sm:text-sm rounded-lg shadow-lg transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
+              :title="isReadyToProcess() ? (tracks.some(t => !t.hasMastered) ? 'All tracks must be mastered before sequencing' : 'Sequence album into dramatic arc, tag metadata, and generate playlists') : 'Please specify both Input and Output folders before sequencing'"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                ></path>
+              </svg>
+              5. Sequence Album
+            </button>
+
+            <!-- Stop Batch Button -->
+            <template x-if="isBatchRunning">
+              <button
+                @click="stopBatchProcessing()"
+                :disabled="abortRequested"
+                class="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold py-2 px-4 text-xs sm:text-sm rounded-lg shadow-lg shadow-red-500/20 transition flex items-center gap-1.5 animate-pulse"
+                title="Cancel/Stop batch processing after the current track finishes"
+              >
+                <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M6 6h12v12H6z" /></svg>
+                <span x-text="abortRequested ? 'Aborting Batch...' : '⏹ Stop Batch'"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr>
+              <th colspan="3" class="border-b border-gray-700/80"></th>
+              <th colspan="4" class="px-2 pb-2 pt-2 border-b border-gray-700/80">
+                <div
+                  class="h-1.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 via-cyan-500 to-emerald-500 rounded-full opacity-80"
+                  title="4-Step DSP Pipeline: Analyze -> Split -> Mix -> Master"
+                ></div>
+              </th>
+              <th colspan="2" class="border-b border-gray-700/80"></th>
+            </tr>
+            <tr class="text-gray-400 text-sm border-b border-gray-700/80">
+              <th class="py-3 px-2" title="Audio track filename">Track Name</th>
+              <th class="py-3 px-1 text-center w-12" title="Listen to original raw Suno export">Raw</th>
+              <th class="py-2 px-2 w-44">
+                <div class="flex flex-col gap-1 w-44">
+                  <span class="text-xs text-gray-300 font-semibold truncate" title="Target Acoustic Genre Profile"
+                    >DSP Profile (Set all...)</span
+                  >
+                  <select
+                    x-model="globalPreset"
+                    @change="applyGlobalPreset()"
+                    class="w-full bg-[#111827] border border-cyan-500/50 hover:border-cyan-400 rounded px-2 py-1 text-xs text-cyan-300 font-medium focus:outline-none focus:border-cyan-400 shadow transition"
+                    title="Choose a DSP profile here to apply it to all tracks simultaneously"
+                  >
+                    <template x-for="[key, p] in Object.entries(presets)" :key="key">
+                      <option :value="key" x-text="p.name" :selected="key === globalPreset"></option>
+                    </template>
+                  </select>
+                </div>
+              </th>
+              <!-- Step 1: Analyze -->
+              <th class="py-3 px-2 text-center bg-indigo-900/10">
+                <button
+                  @click="batchProcessColumn('analyze')"
+                  :disabled="!isReadyToProcess()"
+                  class="w-full flex flex-col items-center gap-1 hover:text-indigo-400 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Step 1: Analyze raw audio (LUFS, True Peak, LRA, Spectral DNA)"
+                >
+                  <span class="text-indigo-300">1. Analyze</span>
+                  <span
+                    class="text-[10px] bg-gray-700 group-hover:bg-indigo-600/50 text-white px-2 py-0.5 rounded shadow"
+                    >All</span
+                  >
+                </button>
+              </th>
+              <!-- Step 2: Split -->
+              <th class="py-3 px-2 text-center bg-purple-900/10">
+                <button
+                  @click="batchProcessColumn('split')"
+                  :disabled="!isReadyToProcess()"
+                  class="w-full flex flex-col items-center gap-1 hover:text-purple-400 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Step 2: Separate vocals, bass, drums, other stems using Demucs AI"
+                >
+                  <span class="text-purple-300">2. Split</span>
+                  <span
+                    class="text-[10px] bg-gray-700 group-hover:bg-purple-600/50 text-white px-2 py-0.5 rounded shadow"
+                    >All</span
+                  >
+                </button>
+              </th>
+              <!-- Step 3: Mix -->
+              <th class="py-3 px-2 text-center bg-cyan-900/10">
+                <button
+                  @click="batchProcessColumn('mix')"
+                  :disabled="!isReadyToProcess()"
+                  class="w-full flex flex-col items-center gap-1 hover:text-cyan-400 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Step 3: Auto-mix stems with analog warmth and de-mudding"
+                >
+                  <span class="text-cyan-300">3. Mix</span>
+                  <span class="text-[10px] bg-gray-700 group-hover:bg-cyan-600/50 text-white px-2 py-0.5 rounded shadow"
+                    >All</span
+                  >
+                </button>
+              </th>
+              <!-- Step 4: Master -->
+              <th class="py-3 px-2 text-center bg-emerald-900/10">
+                <button
+                  @click="batchProcessColumn('master')"
+                  :disabled="!isReadyToProcess()"
+                  class="w-full flex flex-col items-center gap-1 hover:text-emerald-400 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Step 4: Two-Pass Linear Mastering (EBU R128 -16 LUFS)"
+                >
+                  <span class="text-emerald-300">4. Master</span>
+                  <span
+                    class="text-[10px] bg-gray-700 group-hover:bg-emerald-600/50 text-white px-2 py-0.5 rounded shadow"
+                    >All</span
+                  >
+                </button>
+              </th>
+              <!-- Quality Report Header with Report All button directly below -->
+              <th class="py-2 px-3 text-left">
+                <div class="flex flex-col gap-1 items-start">
+                  <span
+                    class="text-xs text-gray-300 font-semibold"
+                    title="Quality KPIs, Apple Music compliance, and applied DSP filters"
+                    >Quality Report</span
+                  >
+                  <button
+                    @click="batchProcessQualityReport()"
+                    :disabled="!isReadyToProcess() || !tracks.some(t => t.hasMastered)"
+                    class="text-[10px] bg-gray-700 hover:bg-emerald-600/60 text-white px-2.5 py-0.5 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed font-semibold"
+                    title="Generate Quality Report for all mastered tracks"
+                  >
+                    Report All
+                  </button>
+                </div>
+              </th>
+              <!-- Master Playback Header at the very end -->
+              <th class="py-3 px-1 text-center w-14" title="Listen to finished 24-bit studio master">Master</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="(track, index) in tracks" :key="track.name">
+              <tr
+                class="border-b border-gray-700/30 hover:bg-gray-700/20 transition-colors"
+                :class="track.isProcessing ? 'bg-gray-700/40 animate-pulse' : ''"
+              >
                 <!-- Track Name -->
                 <td class="py-4 px-2 font-medium text-gray-200" x-text="track.name" :title="track.fileName"></td>
 
                 <!-- Play Raw Column -->
                 <td class="py-4 px-1 text-center">
-                  <button @click="togglePlay('raw', track)" class="w-8 h-8 rounded-full border-2 border-gray-600 hover:border-cyan-400 hover:bg-cyan-900/30 flex items-center justify-center transition-all mx-auto shadow" title="Play original unmastered export">
+                  <button
+                    @click="togglePlay('raw', track)"
+                    class="w-8 h-8 rounded-full border-2 border-gray-600 hover:border-cyan-400 hover:bg-cyan-900/30 flex items-center justify-center transition-all mx-auto shadow"
+                    title="Play original unmastered export"
+                  >
                     <template x-if="currentlyPlayingTrack === track.name + 'raw' && isPlaying">
-                      <svg class="w-4 h-4 text-cyan-400" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                      <svg class="w-4 h-4 text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                      </svg>
                     </template>
                     <template x-if="currentlyPlayingTrack !== track.name + 'raw' || !isPlaying">
-                      <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                      <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
                     </template>
                   </button>
                 </td>
 
                 <!-- DSP Profile Selector -->
                 <td class="py-4 px-2 w-44">
-                  <select x-model="track.preset" :disabled="track.isProcessing || !isReadyToProcess()" class="w-44 bg-[#111827] border border-gray-600 rounded p-1.5 text-xs text-gray-300 focus:outline-none focus:border-cyan-500 disabled:opacity-50 transition" title="Choose genre profile for calibrated EQ curves and stereowidth">
+                  <select
+                    x-model="track.preset"
+                    :disabled="track.isProcessing || !isReadyToProcess()"
+                    class="w-44 bg-[#111827] border border-gray-600 rounded p-1.5 text-xs text-gray-300 focus:outline-none focus:border-cyan-500 disabled:opacity-50 transition"
+                    title="Choose genre profile for calibrated EQ curves and stereowidth"
+                  >
                     <template x-for="[key, p] in Object.entries(presets)" :key="key">
                       <option :value="key" x-text="p.name" :selected="key === track.preset"></option>
                     </template>
@@ -483,149 +915,390 @@
                 <!-- Step 1: Analyze -->
                 <td class="py-4 px-2 text-center bg-indigo-900/5">
                   <template x-if="track.isProcessing === 'analyze'">
-                     <svg class="animate-spin h-5 w-5 text-indigo-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <svg
+                      class="animate-spin h-5 w-5 text-indigo-400 mx-auto"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
                   </template>
                   <template x-if="!track.isProcessing && track.hasAnalyzed">
                     <div class="flex flex-col items-center gap-0.5">
-                      <span class="inline-flex items-center gap-1 text-indigo-400 text-xs font-bold uppercase tracking-wider bg-indigo-900/30 px-2 py-0.5 rounded" title="Raw audio analyzed">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Done
+                      <span
+                        class="inline-flex items-center gap-1 text-indigo-400 text-xs font-bold uppercase tracking-wider bg-indigo-900/30 px-2 py-0.5 rounded"
+                        title="Raw audio analyzed"
+                      >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M5 13l4 4L19 7"
+                          ></path>
+                        </svg>
+                        Done
                       </span>
-                      <span class="text-[10px] text-gray-400 font-mono" x-show="track.rawAnalysis?.integratedLoudnessLufs" x-text="`${track.rawAnalysis?.integratedLoudnessLufs} LUFS`"></span>
+                      <span
+                        class="text-[10px] text-gray-400 font-mono"
+                        x-show="track.rawAnalysis?.integratedLoudnessLufs"
+                        x-text="`${track.rawAnalysis?.integratedLoudnessLufs} LUFS`"
+                      ></span>
                     </div>
                   </template>
                   <template x-if="!track.isProcessing && !track.hasAnalyzed">
-                    <button @click="runRowAction('analyze', track)" :disabled="!isReadyToProcess()" class="text-xs bg-gray-700 hover:bg-indigo-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed border border-indigo-500/30" title="Analyze raw audio EBU R128 loudness and acoustic DNA">Analyze</button>
+                    <button
+                      @click="runRowAction('analyze', track)"
+                      :disabled="!isReadyToProcess()"
+                      class="text-xs bg-gray-700 hover:bg-indigo-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed border border-indigo-500/30"
+                      title="Analyze raw audio EBU R128 loudness and acoustic DNA"
+                    >
+                      Analyze
+                    </button>
                   </template>
                 </td>
 
                 <!-- Step 2: Split -->
                 <td class="py-4 px-2 text-center bg-purple-900/5">
                   <template x-if="track.isProcessing === 'split'">
-                     <svg class="animate-spin h-5 w-5 text-purple-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <svg
+                      class="animate-spin h-5 w-5 text-purple-400 mx-auto"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
                   </template>
                   <template x-if="!track.isProcessing && track.splitSkipped">
-                    <span class="inline-flex items-center gap-1 text-gray-400 text-xs font-bold uppercase tracking-wider bg-gray-800/80 px-2 py-1 rounded border border-gray-700/60 shadow-sm" title="Stem splitting skipped (Direct Master Mode)">
-                      <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+                    <span
+                      class="inline-flex items-center gap-1 text-gray-400 text-xs font-bold uppercase tracking-wider bg-gray-800/80 px-2 py-1 rounded border border-gray-700/60 shadow-sm"
+                      title="Stem splitting skipped (Direct Master Mode)"
+                    >
+                      <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                        />
+                      </svg>
                       Skipped
                     </span>
                   </template>
                   <template x-if="!track.isProcessing && !track.splitSkipped && track.hasSplit">
-                    <span class="inline-flex items-center gap-1 text-purple-400 text-xs font-bold uppercase tracking-wider bg-purple-900/30 px-2 py-1 rounded" title="Stems successfully separated">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Done
+                    <span
+                      class="inline-flex items-center gap-1 text-purple-400 text-xs font-bold uppercase tracking-wider bg-purple-900/30 px-2 py-1 rounded"
+                      title="Stems successfully separated"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      Done
                     </span>
                   </template>
                   <template x-if="!track.isProcessing && !track.splitSkipped && !track.hasSplit">
-                    <button @click="runRowAction('split', track)" :disabled="!isReadyToProcess()" class="text-xs bg-gray-700 hover:bg-purple-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed border border-purple-500/30" title="Separate stems with Demucs">Split</button>
+                    <button
+                      @click="runRowAction('split', track)"
+                      :disabled="!isReadyToProcess()"
+                      class="text-xs bg-gray-700 hover:bg-purple-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed border border-purple-500/30"
+                      title="Separate stems with Demucs"
+                    >
+                      Split
+                    </button>
                   </template>
                 </td>
 
                 <!-- Step 3: Mix -->
                 <td class="py-4 px-2 text-center bg-cyan-900/5">
                   <template x-if="track.isProcessing === 'mix'">
-                     <svg class="animate-spin h-5 w-5 text-cyan-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <svg
+                      class="animate-spin h-5 w-5 text-cyan-400 mx-auto"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
                   </template>
                   <template x-if="!track.isProcessing && track.mixSkipped">
-                    <span class="inline-flex items-center gap-1 text-gray-400 text-xs font-bold uppercase tracking-wider bg-gray-800/80 px-2 py-1 rounded border border-gray-700/60 shadow-sm" title="Stem mixing skipped (Direct Master Mode)">
-                      <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+                    <span
+                      class="inline-flex items-center gap-1 text-gray-400 text-xs font-bold uppercase tracking-wider bg-gray-800/80 px-2 py-1 rounded border border-gray-700/60 shadow-sm"
+                      title="Stem mixing skipped (Direct Master Mode)"
+                    >
+                      <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                        />
+                      </svg>
                       Skipped
                     </span>
                   </template>
                   <template x-if="!track.isProcessing && !track.mixSkipped && track.hasMixed">
                     <div class="flex items-center justify-center gap-1.5">
-                      <span class="inline-flex items-center gap-1 text-cyan-400 text-xs font-bold uppercase tracking-wider bg-cyan-900/30 px-2 py-1 rounded" title="Stems mixdown completed">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Done
+                      <span
+                        class="inline-flex items-center gap-1 text-cyan-400 text-xs font-bold uppercase tracking-wider bg-cyan-900/30 px-2 py-1 rounded"
+                        title="Stems mixdown completed"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M5 13l4 4L19 7"
+                          ></path>
+                        </svg>
+                        Done
                       </span>
-                      <button @click="runRowAction('mix', track)" class="text-gray-500 hover:text-cyan-400 transition" title="Re-mix stems with current DSP profile">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                      <button
+                        @click="runRowAction('mix', track)"
+                        class="text-gray-500 hover:text-cyan-400 transition"
+                        title="Re-mix stems with current DSP profile"
+                      >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          ></path>
+                        </svg>
                       </button>
                     </div>
                   </template>
                   <template x-if="!track.isProcessing && !track.mixSkipped && !track.hasMixed">
-                    <button @click="runRowAction('mix', track)" :disabled="!isReadyToProcess() || !track.hasSplit" class="text-xs bg-gray-700 hover:bg-cyan-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed border border-cyan-500/30" title="Mix stems with DSP warm filter chain">Mix</button>
+                    <button
+                      @click="runRowAction('mix', track)"
+                      :disabled="!isReadyToProcess() || !track.hasSplit"
+                      class="text-xs bg-gray-700 hover:bg-cyan-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed border border-cyan-500/30"
+                      title="Mix stems with DSP warm filter chain"
+                    >
+                      Mix
+                    </button>
                   </template>
                 </td>
 
                 <!-- Step 4: Master -->
                 <td class="py-4 px-2 text-center bg-emerald-900/5">
                   <template x-if="track.isProcessing === 'master'">
-                     <svg class="animate-spin h-5 w-5 text-emerald-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <svg
+                      class="animate-spin h-5 w-5 text-emerald-400 mx-auto"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
                   </template>
                   <template x-if="!track.isProcessing && track.hasMastered">
                     <div class="flex items-center justify-center gap-1.5">
-                      <span class="inline-flex items-center gap-1 text-emerald-400 text-xs font-bold uppercase tracking-wider bg-emerald-900/30 px-2 py-1 rounded" title="Final 24-bit Studio Master complete">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Done
+                      <span
+                        class="inline-flex items-center gap-1 text-emerald-400 text-xs font-bold uppercase tracking-wider bg-emerald-900/30 px-2 py-1 rounded"
+                        title="Final 24-bit Studio Master complete"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M5 13l4 4L19 7"
+                          ></path>
+                        </svg>
+                        Done
                       </span>
-                      <button @click="runRowAction('master', track)" class="text-gray-500 hover:text-emerald-400 transition" title="Re-master with current DSP profile">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                      <button
+                        @click="runRowAction('master', track)"
+                        class="text-gray-500 hover:text-emerald-400 transition"
+                        title="Re-master with current DSP profile"
+                      >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          ></path>
+                        </svg>
                       </button>
                       <template x-if="track.masterStats">
-                         <button @click="track.showStats = !track.showStats" class="text-emerald-400 hover:text-emerald-200 focus:outline-none transition-colors" title="Toggle detailed Before/After KPI inspection">
-                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                         </button>
+                        <button
+                          @click="track.showStats = !track.showStats"
+                          class="text-emerald-400 hover:text-emerald-200 focus:outline-none transition-colors"
+                          title="Toggle detailed Before/After KPI inspection"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            ></path>
+                          </svg>
+                        </button>
                       </template>
                     </div>
                   </template>
                   <template x-if="!track.isProcessing && !track.hasMastered">
-                    <button @click="runRowAction('master', track)" :disabled="!isReadyToProcess()" class="text-xs bg-gray-700 hover:bg-emerald-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed border border-emerald-500/30" title="Execute Two-Pass Linear Mastering into selected output folder">Master</button>
+                    <button
+                      @click="runRowAction('master', track)"
+                      :disabled="!isReadyToProcess()"
+                      class="text-xs bg-gray-700 hover:bg-emerald-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed border border-emerald-500/30"
+                      title="Execute Two-Pass Linear Mastering into selected output folder"
+                    >
+                      Master
+                    </button>
                   </template>
                 </td>
 
                 <!-- Quality Report Column -->
                 <td class="py-4 px-3 text-xs border-l border-gray-700/30">
-                   <template x-if="track.isProcessing === 'report'">
-                      <div class="flex items-center gap-2 text-emerald-400">
-                         <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                         <span class="text-xs font-mono">Analyzing Master...</span>
+                  <template x-if="track.isProcessing === 'report'">
+                    <div class="flex items-center gap-2 text-emerald-400">
+                      <svg
+                        class="animate-spin h-4 w-4"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          class="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          stroke-width="4"
+                        ></circle>
+                        <path
+                          class="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      <span class="text-xs font-mono">Analyzing Master...</span>
+                    </div>
+                  </template>
+                  <template x-if="track.isProcessing !== 'report' && track.masterStats">
+                    <div class="flex flex-col gap-1 w-max">
+                      <div
+                        class="flex items-center justify-between gap-3"
+                        title="Selected or Auto-detected Genre Profile"
+                      >
+                        <div class="flex items-center gap-2">
+                          <span class="text-gray-500 w-14">Profile:</span>
+                          <span
+                            class="text-amber-300 font-semibold"
+                            x-text="track.masterStats.presetName || (presets[track.masterStats.preset]?.name) || track.masterStats.genre || track.masterStats.autoDetectedGenre?.genreName || track.masterStats.autoDetectedGenre?.name || (presets[track.preset]?.name) || '—'"
+                          ></span>
+                        </div>
+                        <button
+                          @click="runRowAction('report', track)"
+                          class="text-gray-500 hover:text-emerald-400 transition"
+                          title="Re-analyze master & refresh report"
+                        >
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            ></path>
+                          </svg>
+                        </button>
                       </div>
-                   </template>
-                   <template x-if="track.isProcessing !== 'report' && track.masterStats">
-                      <div class="flex flex-col gap-1 w-max">
-                         <div class="flex items-center justify-between gap-3" title="Selected or Auto-detected Genre Profile">
-                            <div class="flex items-center gap-2">
-                              <span class="text-gray-500 w-14">Profile:</span>
-                              <span class="text-amber-300 font-semibold" x-text="track.masterStats.presetName || (presets[track.masterStats.preset]?.name) || track.masterStats.genre || track.masterStats.autoDetectedGenre?.genreName || track.masterStats.autoDetectedGenre?.name || (presets[track.preset]?.name) || '—'"></span>
-                            </div>
-                            <button @click="runRowAction('report', track)" class="text-gray-500 hover:text-emerald-400 transition" title="Re-analyze master & refresh report">
-                              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                            </button>
-                         </div>
-                         <div class="flex items-center gap-2" title="Apple Music Digital Masters Compliance Score">
-                            <span class="text-gray-500 w-14">Store:</span>
-                            <span class="font-bold flex items-center gap-1" :class="track.masterStats.kpi_vergleich?.appleMusicConfidence === 'High' ? 'text-emerald-400' : 'text-yellow-400'">
-                              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                              <span x-text="track.masterStats.kpi_vergleich?.appleMusicConfidence || 'High'"></span>
-                            </span>
-                         </div>
-                         <div class="flex items-center gap-2" title="Integrated Loudness Target">
-                            <span class="text-gray-500 w-14">LUFS:</span>
-                            <span class="text-gray-200 font-mono" x-text="(track.masterStats.kpi_vergleich?.lufs?.after_target || 'N/A')"></span>
-                         </div>
-                         <div class="flex items-center gap-2" title="True Peak Headroom Target">
-                            <span class="text-gray-500 w-14">Peak:</span>
-                            <span class="text-gray-200 font-mono" x-text="(track.masterStats.kpi_vergleich?.truePeak?.after_target || 'N/A')"></span>
-                         </div>
+                      <div class="flex items-center gap-2" title="Apple Music Digital Masters Compliance Score">
+                        <span class="text-gray-500 w-14">Store:</span>
+                        <span
+                          class="font-bold flex items-center gap-1"
+                          :class="track.masterStats.kpi_vergleich?.appleMusicConfidence === 'High' ? 'text-emerald-400' : 'text-yellow-400'"
+                        >
+                          <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                            <path
+                              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+                            />
+                          </svg>
+                          <span x-text="track.masterStats.kpi_vergleich?.appleMusicConfidence || 'High'"></span>
+                        </span>
                       </div>
-                   </template>
-                   <template x-if="track.isProcessing !== 'report' && !track.masterStats && track.hasMastered">
-                      <button @click="runRowAction('report', track)" :disabled="!isReadyToProcess()" class="text-xs bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-1.5 px-3 rounded shadow transition flex items-center gap-1.5 border border-emerald-500/30" title="Analyze this master and generate Quality Report JSON">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                        Generate Report
-                      </button>
-                   </template>
-                   <template x-if="track.isProcessing !== 'report' && !track.hasMastered">
-                      <span class="text-gray-600 italic">Pending Master...</span>
-                   </template>
+                      <div class="flex items-center gap-2" title="Integrated Loudness Target">
+                        <span class="text-gray-500 w-14">LUFS:</span>
+                        <span
+                          class="text-gray-200 font-mono"
+                          x-text="(track.masterStats.kpi_vergleich?.lufs?.after_target || 'N/A')"
+                        ></span>
+                      </div>
+                      <div class="flex items-center gap-2" title="True Peak Headroom Target">
+                        <span class="text-gray-500 w-14">Peak:</span>
+                        <span
+                          class="text-gray-200 font-mono"
+                          x-text="(track.masterStats.kpi_vergleich?.truePeak?.after_target || 'N/A')"
+                        ></span>
+                      </div>
+                    </div>
+                  </template>
+                  <template x-if="track.isProcessing !== 'report' && !track.masterStats && track.hasMastered">
+                    <button
+                      @click="runRowAction('report', track)"
+                      :disabled="!isReadyToProcess()"
+                      class="text-xs bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-1.5 px-3 rounded shadow transition flex items-center gap-1.5 border border-emerald-500/30"
+                      title="Analyze this master and generate Quality Report JSON"
+                    >
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                        ></path>
+                      </svg>
+                      Generate Report
+                    </button>
+                  </template>
+                  <template x-if="track.isProcessing !== 'report' && !track.hasMastered">
+                    <span class="text-gray-600 italic">Pending Master...</span>
+                  </template>
                 </td>
 
                 <!-- Play Mastered Column (at the very end of the row) -->
                 <td class="py-4 px-1 text-center">
                   <template x-if="track.hasMastered">
-                    <button @click="togglePlay('master', track)" class="w-8 h-8 rounded-full border-2 border-emerald-600 hover:border-emerald-400 hover:bg-emerald-900/30 flex items-center justify-center transition-all mx-auto shadow" title="Play 24-bit Lossless Studio Master">
+                    <button
+                      @click="togglePlay('master', track)"
+                      class="w-8 h-8 rounded-full border-2 border-emerald-600 hover:border-emerald-400 hover:bg-emerald-900/30 flex items-center justify-center transition-all mx-auto shadow"
+                      title="Play 24-bit Lossless Studio Master"
+                    >
                       <template x-if="currentlyPlayingTrack === track.name + 'master' && isPlaying">
-                        <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                        <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                        </svg>
                       </template>
                       <template x-if="currentlyPlayingTrack !== track.name + 'master' || !isPlaying">
-                        <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
                       </template>
                     </button>
                   </template>
@@ -634,884 +1307,980 @@
 
               <!-- Expanded Stats Row -->
               <template x-if="track.showStats && track.masterStats">
-                 <tr class="bg-gray-900/40 border-b border-gray-700/30">
-                    <td colspan="9" class="py-4 px-6 text-sm text-gray-300">
-                       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                             <h4 class="text-emerald-400 font-bold mb-2 uppercase text-xs tracking-wider">Before / After Comparison</h4>
-                             <div class="space-y-1 font-mono text-[11px]">
-                                <div class="flex justify-between border-b border-gray-800 pb-1">
-                                   <span class="text-gray-500">Loudness (LUFS)</span>
-                                   <span><span class="text-gray-400" x-text="track.masterStats.kpi_vergleich?.lufs?.before_measured || 'N/A'"></span> <span class="text-emerald-500 font-bold ml-1">➔</span> <span class="text-white" x-text="track.masterStats.kpi_vergleich?.lufs?.after_target || 'N/A'"></span></span>
-                                </div>
-                                <div class="flex justify-between border-b border-gray-800 pb-1">
-                                   <span class="text-gray-500">True Peak (dBTP)</span>
-                                   <span><span class="text-gray-400" x-text="track.masterStats.kpi_vergleich?.truePeak?.before_measured || 'N/A'"></span> <span class="text-emerald-500 font-bold ml-1">➔</span> <span class="text-white" x-text="track.masterStats.kpi_vergleich?.truePeak?.after_target || 'N/A'"></span></span>
-                                </div>
-                                <div class="flex justify-between border-b border-gray-800 pb-1">
-                                   <span class="text-gray-500">Apple Music Ready</span>
-                                   <span class="text-white font-bold" :class="track.masterStats.kpi_vergleich?.appleMusicConfidence === 'High' ? 'text-emerald-400' : 'text-yellow-400'" x-text="track.masterStats.kpi_vergleich?.appleMusicConfidence || 'High'"></span>
-                                </div>
-                             </div>
+                <tr class="bg-gray-900/40 border-b border-gray-700/30">
+                  <td colspan="9" class="py-4 px-6 text-sm text-gray-300">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <h4 class="text-emerald-400 font-bold mb-2 uppercase text-xs tracking-wider">
+                          Before / After Comparison
+                        </h4>
+                        <div class="space-y-1 font-mono text-[11px]">
+                          <div class="flex justify-between border-b border-gray-800 pb-1">
+                            <span class="text-gray-500">Loudness (LUFS)</span>
+                            <span
+                              ><span
+                                class="text-gray-400"
+                                x-text="track.masterStats.kpi_vergleich?.lufs?.before_measured || 'N/A'"
+                              ></span>
+                              <span class="text-emerald-500 font-bold ml-1">➔</span>
+                              <span
+                                class="text-white"
+                                x-text="track.masterStats.kpi_vergleich?.lufs?.after_target || 'N/A'"
+                              ></span
+                            ></span>
                           </div>
-                          <div>
-                             <h4 class="text-cyan-400 font-bold mb-2 uppercase text-xs tracking-wider">Applied Optimizations</h4>
-                             <ul class="list-disc list-inside space-y-1 text-[11px] text-gray-400">
-                                <template x-for="opt in track.masterStats.optimizations">
-                                   <li x-text="opt"></li>
-                                </template>
-                             </ul>
+                          <div class="flex justify-between border-b border-gray-800 pb-1">
+                            <span class="text-gray-500">True Peak (dBTP)</span>
+                            <span
+                              ><span
+                                class="text-gray-400"
+                                x-text="track.masterStats.kpi_vergleich?.truePeak?.before_measured || 'N/A'"
+                              ></span>
+                              <span class="text-emerald-500 font-bold ml-1">➔</span>
+                              <span
+                                class="text-white"
+                                x-text="track.masterStats.kpi_vergleich?.truePeak?.after_target || 'N/A'"
+                              ></span
+                            ></span>
                           </div>
-                       </div>
-                    </td>
-                 </tr>
+                          <div class="flex justify-between border-b border-gray-800 pb-1">
+                            <span class="text-gray-500">Apple Music Ready</span>
+                            <span
+                              class="text-white font-bold"
+                              :class="track.masterStats.kpi_vergleich?.appleMusicConfidence === 'High' ? 'text-emerald-400' : 'text-yellow-400'"
+                              x-text="track.masterStats.kpi_vergleich?.appleMusicConfidence || 'High'"
+                            ></span>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 class="text-cyan-400 font-bold mb-2 uppercase text-xs tracking-wider">
+                          Applied Optimizations
+                        </h4>
+                        <ul class="list-disc list-inside space-y-1 text-[11px] text-gray-400">
+                          <template x-for="opt in track.masterStats.optimizations">
+                            <li x-text="opt"></li>
+                          </template>
+                        </ul>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
               </template>
-          </template>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Processing Loader -->
-    <div x-show="loading" class="mt-6 mb-4 flex items-center justify-center font-bold text-cyan-400 bg-cyan-900/20 border border-cyan-500/30 p-3 rounded-lg shadow-lg">
-      <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-      System is processing audio. Please wait...
-    </div>
-
-    <!-- Status & Output Console -->
-    <div class="mt-4 bg-[#050810] rounded-2xl p-5 shadow-inner border border-gray-800/80 h-80 overflow-y-auto font-mono text-sm relative">
-      <div class="absolute top-4 right-4 flex space-x-1">
-        <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
-        <div class="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-        <div class="w-3 h-3 rounded-full bg-green-500/80"></div>
+            </template>
+          </tbody>
+        </table>
       </div>
-      
-      <template x-for="(log, i) in consoleLogs" :key="i">
-        <div class="mb-1.5 leading-relaxed" :class="log.type === 'error' ? 'text-red-400' : (log.type === 'success' ? 'text-emerald-400' : 'text-gray-300')" x-html="log.msg"></div>
-      </template>
+
+      <!-- Processing Loader -->
+      <div
+        x-show="loading"
+        class="mt-6 mb-4 flex items-center justify-center font-bold text-cyan-400 bg-cyan-900/20 border border-cyan-500/30 p-3 rounded-lg shadow-lg"
+      >
+        <svg
+          class="animate-spin -ml-1 mr-3 h-5 w-5 text-cyan-400"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          ></path>
+        </svg>
+        System is processing audio. Please wait...
+      </div>
+
+      <!-- Status & Output Console -->
+      <div
+        class="mt-4 bg-[#050810] rounded-2xl p-5 shadow-inner border border-gray-800/80 h-80 overflow-y-auto font-mono text-sm relative"
+      >
+        <div class="absolute top-4 right-4 flex space-x-1">
+          <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
+          <div class="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+          <div class="w-3 h-3 rounded-full bg-green-500/80"></div>
+        </div>
+
+        <template x-for="(log, i) in consoleLogs" :key="i">
+          <div
+            class="mb-1.5 leading-relaxed"
+            :class="log.type === 'error' ? 'text-red-400' : (log.type === 'success' ? 'text-emerald-400' : 'text-gray-300')"
+            x-html="log.msg"
+          ></div>
+        </template>
+      </div>
+
+      <!-- Floating Now Playing Bar -->
+      <div
+        x-show="isPlaying"
+        class="fixed bottom-6 right-6 z-50 bg-gray-900/95 border border-cyan-500/80 rounded-2xl px-4 py-3 shadow-2xl backdrop-blur-md flex items-center gap-3"
+        style="display: none"
+      >
+        <div class="flex items-center gap-1 text-cyan-400">
+          <span class="w-1 h-3 bg-cyan-400 animate-pulse rounded-full"></span>
+          <span class="w-1 h-5 bg-cyan-400 animate-pulse delay-75 rounded-full"></span>
+          <span class="w-1 h-3 bg-cyan-400 animate-pulse delay-150 rounded-full"></span>
+        </div>
+        <div class="flex flex-col">
+          <span class="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Audio Playback</span>
+          <span class="text-xs font-bold text-white max-w-[220px] truncate" x-text="currentlyPlayingTitle"></span>
+        </div>
+        <button
+          @click="stopAudio()"
+          class="bg-red-500/20 hover:bg-red-500/40 text-red-400 border border-red-500/40 font-bold px-2.5 py-1 rounded-lg text-xs transition flex items-center gap-1 shadow ml-2"
+          title="Stop audio playback"
+        >
+          <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M6 6h12v12H6z" /></svg>
+          Stop
+        </button>
+      </div>
     </div>
 
-    <!-- Floating Now Playing Bar -->
-    <div x-show="isPlaying" class="fixed bottom-6 right-6 z-50 bg-gray-900/95 border border-cyan-500/80 rounded-2xl px-4 py-3 shadow-2xl backdrop-blur-md flex items-center gap-3" style="display: none;">
-      <div class="flex items-center gap-1 text-cyan-400">
-        <span class="w-1 h-3 bg-cyan-400 animate-pulse rounded-full"></span>
-        <span class="w-1 h-5 bg-cyan-400 animate-pulse delay-75 rounded-full"></span>
-        <span class="w-1 h-3 bg-cyan-400 animate-pulse delay-150 rounded-full"></span>
-      </div>
-      <div class="flex flex-col">
-        <span class="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Audio Playback</span>
-        <span class="text-xs font-bold text-white max-w-[220px] truncate" x-text="currentlyPlayingTitle"></span>
-      </div>
-      <button @click="stopAudio()" class="bg-red-500/20 hover:bg-red-500/40 text-red-400 border border-red-500/40 font-bold px-2.5 py-1 rounded-lg text-xs transition flex items-center gap-1 shadow ml-2" title="Stop audio playback">
-        <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
-        Stop
-      </button>
-    </div>
+    <script>
+      function studioApp() {
+        return {
+          targetPath: 'E:\\Music Projects\\Frozen Time\\suno_exports',
+          outputFolder: 'E:\\Music Projects\\Frozen Time\\mastered_versions_v1',
+          albumList: [],
+          selectedAlbum: '',
+          albumRoot: '',
+          availableVersions: ['mastered_versions', 'mastered_versions_v1'],
+          currentVersion: 'mastered_versions_v1',
+          existingOutputCount: 0,
+          showWarningModal: false,
+          acknowledgedFolders: {},
+          showFolderModal: false,
+          browseTargetType: 'input',
+          modalCurrentPath: 'E:\\Music Projects',
+          modalDirectories: [],
+          modalParentPath: null,
+          globalPreset: 'auto',
+          presets: {},
+          tracks: [],
+          loading: false,
+          isBatchRunning: false,
+          abortRequested: false,
 
-  </div>
+          stopBatchProcessing() {
+            if (this.isBatchRunning) {
+              this.abortRequested = true;
+              this.log('⏹ Stop requested by user. Aborting batch workflow...', 'warning');
+            }
+          },
 
-  <script>
-    function studioApp() {
-      return {
-        targetPath: 'E:\\Music Projects\\Frozen Time\\suno_exports',
-        outputFolder: 'E:\\Music Projects\\Frozen Time\\mastered_versions_v1',
-        albumList: [],
-        selectedAlbum: '',
-        albumRoot: '',
-        availableVersions: ['mastered_versions', 'mastered_versions_v1'],
-        currentVersion: 'mastered_versions_v1',
-        existingOutputCount: 0,
-        showWarningModal: false,
-        acknowledgedFolders: {},
-        showFolderModal: false,
-        browseTargetType: 'input',
-        modalCurrentPath: 'E:\\Music Projects',
-        modalDirectories: [],
-        modalParentPath: null,
-        globalPreset: 'auto',
-        presets: {},
-        tracks: [],
-        loading: false,
-        isBatchRunning: false,
-        abortRequested: false,
-
-        stopBatchProcessing() {
-          if (this.isBatchRunning) {
-            this.abortRequested = true;
-            this.log('⏹ Stop requested by user. Aborting batch workflow...', 'warning');
-          }
-        },
-
-        applyGlobalPreset() {
-          if (!this.globalPreset) return;
-          this.tracks.forEach(track => {
-            track.preset = this.globalPreset;
-          });
-          const presetName = this.presets[this.globalPreset]?.name || this.globalPreset;
-          this.log(`Set DSP Profile for all ${this.tracks.length} tracks to: ${presetName}`, 'info');
-        },
-        cpu: 0,
-        gpu: 0,
-        consoleLogs: [{type: 'system', msg: '> Moondiver DSP Engine ready.'}],
-        currentlyPlayingTrack: null,
-        currentlyPlayingTitle: '',
-        isPlaying: false,
-        audioCurrentTime: 0,
-        audioDuration: 0,
-        audioVolume: 1.0,
-
-        handleAudioError(e) {
-          const audio = this.$refs.masterAudio;
-          const errCode = audio && audio.error ? audio.error.code : 'unknown';
-          const errMsg = audio && audio.error ? audio.error.message : '';
-          this.log(`Audio error (code ${errCode}): ${errMsg || 'Stream could not be decoded'}`, 'error');
-          this.stopAudio();
-        },
-
-        formatTime(secs) {
-          if (!secs || isNaN(secs)) return '0:00';
-          const m = Math.floor(secs / 60);
-          const s = Math.floor(secs % 60);
-          return `${m}:${s < 10 ? '0' : ''}${s}`;
-        },
-
-        seekAudio(e) {
-          const audio = this.$refs.masterAudio;
-          if (audio) {
-            const time = parseFloat(e.target.value);
-            audio.currentTime = time;
-            this.audioCurrentTime = time;
-          }
-        },
-
-        rewindAudio(secs = 10) {
-          const audio = this.$refs.masterAudio;
-          if (audio) {
-            audio.currentTime = Math.max(0, audio.currentTime - secs);
-            this.audioCurrentTime = audio.currentTime;
-          }
-        },
-
-        forwardAudio(secs = 10) {
-          const audio = this.$refs.masterAudio;
-          if (audio) {
-            audio.currentTime = Math.min(this.audioDuration || 9999, audio.currentTime + secs);
-            this.audioCurrentTime = audio.currentTime;
-          }
-        },
-
-        stopAudio() {
-          const audio = this.$refs.masterAudio;
-          if (audio) {
-            try {
-              audio.pause();
-              audio.currentTime = 0;
-            } catch(e) {}
-          }
-          this.isPlaying = false;
-          this.currentlyPlayingTrack = null;
-          this.currentlyPlayingTitle = '';
-          this.audioCurrentTime = 0;
-          this.audioDuration = 0;
-        },
-
-        toggleGlobalPlayback() {
-          const audio = this.$refs.masterAudio;
-          if (!audio || !audio.src) return;
-          if (audio.paused) {
-            audio.play().then(() => {
-              this.isPlaying = true;
-            }).catch(e => {
-              this.log('Playback resume error: ' + e.message, 'error');
-              this.stopAudio();
+          applyGlobalPreset() {
+            if (!this.globalPreset) return;
+            this.tracks.forEach(track => {
+              track.preset = this.globalPreset;
             });
-          } else {
-            audio.pause();
+            const presetName = this.presets[this.globalPreset]?.name || this.globalPreset;
+            this.log(`Set DSP Profile for all ${this.tracks.length} tracks to: ${presetName}`, 'info');
+          },
+          cpu: 0,
+          gpu: 0,
+          consoleLogs: [{ type: 'system', msg: '> Moondiver DSP Engine ready.' }],
+          currentlyPlayingTrack: null,
+          currentlyPlayingTitle: '',
+          isPlaying: false,
+          audioCurrentTime: 0,
+          audioDuration: 0,
+          audioVolume: 1.0,
+
+          handleAudioError(e) {
+            const audio = this.$refs.masterAudio;
+            const errCode = audio && audio.error ? audio.error.code : 'unknown';
+            const errMsg = audio && audio.error ? audio.error.message : '';
+            this.log(`Audio error (code ${errCode}): ${errMsg || 'Stream could not be decoded'}`, 'error');
+            this.stopAudio();
+          },
+
+          formatTime(secs) {
+            if (!secs || isNaN(secs)) return '0:00';
+            const m = Math.floor(secs / 60);
+            const s = Math.floor(secs % 60);
+            return `${m}:${s < 10 ? '0' : ''}${s}`;
+          },
+
+          seekAudio(e) {
+            const audio = this.$refs.masterAudio;
+            if (audio) {
+              const time = parseFloat(e.target.value);
+              audio.currentTime = time;
+              this.audioCurrentTime = time;
+            }
+          },
+
+          rewindAudio(secs = 10) {
+            const audio = this.$refs.masterAudio;
+            if (audio) {
+              audio.currentTime = Math.max(0, audio.currentTime - secs);
+              this.audioCurrentTime = audio.currentTime;
+            }
+          },
+
+          forwardAudio(secs = 10) {
+            const audio = this.$refs.masterAudio;
+            if (audio) {
+              audio.currentTime = Math.min(this.audioDuration || 9999, audio.currentTime + secs);
+              this.audioCurrentTime = audio.currentTime;
+            }
+          },
+
+          stopAudio() {
+            const audio = this.$refs.masterAudio;
+            if (audio) {
+              try {
+                audio.pause();
+                audio.currentTime = 0;
+              } catch (e) {}
+            }
             this.isPlaying = false;
-          }
-        },
+            this.currentlyPlayingTrack = null;
+            this.currentlyPlayingTitle = '';
+            this.audioCurrentTime = 0;
+            this.audioDuration = 0;
+          },
 
-        isReadyToProcess() {
-          return !this.loading && 
-                 this.targetPath && this.targetPath.trim().length > 0 && 
-                 this.outputFolder && this.outputFolder.trim().length > 0;
-        },
+          toggleGlobalPlayback() {
+            const audio = this.$refs.masterAudio;
+            if (!audio || !audio.src) return;
+            if (audio.paused) {
+              audio
+                .play()
+                .then(() => {
+                  this.isPlaying = true;
+                })
+                .catch(e => {
+                  this.log('Playback resume error: ' + e.message, 'error');
+                  this.stopAudio();
+                });
+            } else {
+              audio.pause();
+              this.isPlaying = false;
+            }
+          },
 
-        togglePlay(type, track) {
-           const path = type === 'raw' ? track.fullPath : track.masteredFile;
-           if (!path) {
-             this.log(`No audio file found for ${track.name} (${type})`, 'error');
-             return;
-           }
+          isReadyToProcess() {
+            return (
+              !this.loading &&
+              this.targetPath &&
+              this.targetPath.trim().length > 0 &&
+              this.outputFolder &&
+              this.outputFolder.trim().length > 0
+            );
+          },
 
-           const trackId = track.name + type;
-           const audio = this.$refs.masterAudio;
-           if (this.currentlyPlayingTrack === trackId && audio && !audio.paused) {
+          togglePlay(type, track) {
+            const path = type === 'raw' ? track.fullPath : track.masteredFile;
+            if (!path) {
+              this.log(`No audio file found for ${track.name} (${type})`, 'error');
+              return;
+            }
+
+            const trackId = track.name + type;
+            const audio = this.$refs.masterAudio;
+            if (this.currentlyPlayingTrack === trackId && audio && !audio.paused) {
               this.stopAudio();
               return;
-           }
-           
-           this.stopAudio();
-           
-           this.currentlyPlayingTrack = trackId;
-           this.currentlyPlayingTitle = `${track.name} [${type.toUpperCase()}]`;
-           
-           const streamUrl = '/api/stream?path=' + encodeURIComponent(path) + '&_t=' + Date.now();
-           audio.src = streamUrl;
-           audio.volume = this.audioVolume;
-           audio.load();
-           
-           audio.play().then(() => {
-              this.isPlaying = true;
-              this.log(`▶ Now playing: ${this.currentlyPlayingTitle}`, 'info');
-           }).catch(e => {
-              this.log('Audio playback error: ' + e.message, 'error');
+            }
+
+            this.stopAudio();
+
+            this.currentlyPlayingTrack = trackId;
+            this.currentlyPlayingTitle = `${track.name} [${type.toUpperCase()}]`;
+
+            const streamUrl = '/api/stream?path=' + encodeURIComponent(path) + '&_t=' + Date.now();
+            audio.src = streamUrl;
+            audio.volume = this.audioVolume;
+            audio.load();
+
+            audio
+              .play()
+              .then(() => {
+                this.isPlaying = true;
+                this.log(`▶ Now playing: ${this.currentlyPlayingTitle}`, 'info');
+              })
+              .catch(e => {
+                this.log('Audio playback error: ' + e.message, 'error');
+                this.stopAudio();
+              });
+          },
+
+          async init() {
+            window.addEventListener('beforeunload', () => {
               this.stopAudio();
-           });
-        },
-
-        async init() {
-          window.addEventListener('beforeunload', () => { this.stopAudio(); });
-          window.addEventListener('pagehide', () => { this.stopAudio(); });
-          window.addEventListener('unload', () => { this.stopAudio(); });
-          try {
-            const res = await fetch('/api/presets');
-            this.presets = await res.json();
-          } catch(e) {
-            this.log('Error loading presets', 'error');
-          }
-
-          try {
-            const res = await fetch('/api/albums');
-            const data = await res.json();
-            this.albumList = data.albums || [];
-          } catch(e) {}
-          
-          await this.scanFolder();
-
-          setInterval(async () => {
+            });
+            window.addEventListener('pagehide', () => {
+              this.stopAudio();
+            });
+            window.addEventListener('unload', () => {
+              this.stopAudio();
+            });
             try {
-              const res = await fetch('/api/system-stats');
+              const res = await fetch('/api/presets');
+              this.presets = await res.json();
+            } catch (e) {
+              this.log('Error loading presets', 'error');
+            }
+
+            try {
+              const res = await fetch('/api/albums');
               const data = await res.json();
-              this.cpu = data.cpu;
-              this.gpu = data.gpu;
-            } catch(e) {}
-          }, 1500);
-        },
+              this.albumList = data.albums || [];
+            } catch (e) {}
 
-        onAlbumSelected() {
-          this.stopAudio();
-          if (this.selectedAlbum) {
-            this.targetPath = this.selectedAlbum;
-            // Derivate default output folder
-            let albumRoot = this.selectedAlbum;
-            if (albumRoot.endsWith('\\') || albumRoot.endsWith('/')) albumRoot = albumRoot.slice(0, -1);
-            if (albumRoot.toLowerCase().endsWith('suno_exports')) {
-              albumRoot = albumRoot.substring(0, Math.max(albumRoot.lastIndexOf('\\'), albumRoot.lastIndexOf('/')));
-            }
-            this.albumRoot = albumRoot;
-            this.outputFolder = albumRoot + '\\' + this.currentVersion;
-            this.scanFolder();
-          }
-        },
-
-        onVersionSelected() {
-          this.stopAudio();
-          if (this.albumRoot) {
-            this.outputFolder = this.albumRoot + '\\' + this.currentVersion;
-          }
-          this.scanFolder();
-        },
-
-        async onOutputFolderManualChange() {
-          this.stopAudio();
-          if (this.outputFolder) {
-            await this.checkOutputFolder(this.outputFolder);
             await this.scanFolder();
-          }
-        },
 
-        async checkOutputFolder(folder) {
-          try {
-            const res = await fetch('/api/check-output-folder', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ outputFolder: folder })
-            });
-            const data = await res.json();
-            this.existingOutputCount = data.count || 0;
-            if (this.existingOutputCount > 0 && !this.acknowledgedFolders[folder]) {
-              this.showWarningModal = true;
-            }
-          } catch(e) {}
-        },
+            setInterval(async () => {
+              try {
+                const res = await fetch('/api/system-stats');
+                const data = await res.json();
+                this.cpu = data.cpu;
+                this.gpu = data.gpu;
+              } catch (e) {}
+            }, 1500);
+          },
 
-        acknowledgeWarning() {
-          if (this.outputFolder) {
-            this.acknowledgedFolders[this.outputFolder] = true;
-          }
-          this.showWarningModal = false;
-          this.log(`Output folder acknowledged: ${this.outputFolder}`, 'info');
-        },
-
-        log(msg, type='info') {
-          const timestamp = new Date().toLocaleTimeString();
-          let formatted = msg;
-          if (typeof msg === 'object') {
-            formatted = `<pre class="mt-2 text-gray-400 bg-gray-900/50 p-2 rounded border border-gray-800 overflow-x-auto">${JSON.stringify(msg, null, 2)}</pre>`;
-          }
-          this.consoleLogs.push({type, msg: `<span class="text-gray-500">[${timestamp}]</span> ${formatted}`});
-          setTimeout(() => {
-            const container = document.querySelector('.overflow-y-auto');
-            if (container) container.scrollTop = container.scrollHeight;
-          }, 50);
-        },
-
-        async openFolderModal(type = 'input') {
-          this.browseTargetType = type;
-          let start = type === 'input' ? this.targetPath : (this.outputFolder || this.albumRoot);
-          if (!start || !start.trim()) start = 'E:\\Music Projects';
-          await this.loadDirectory(start);
-          this.showFolderModal = true;
-        },
-
-        async loadDirectory(targetDir) {
-          try {
-            const res = await fetch('/api/list-directory?path=' + encodeURIComponent(targetDir));
-            const data = await res.json();
-            if (res.ok) {
-              this.modalCurrentPath = data.currentPath;
-              this.modalDirectories = data.directories || [];
-              this.modalParentPath = data.parentPath;
-            }
-          } catch(e) {
-            this.log('Error reading directory: ' + e.message, 'error');
-          }
-        },
-
-        async navigateFolderUp() {
-          if (this.modalParentPath) {
-            await this.loadDirectory(this.modalParentPath);
-          }
-        },
-
-        async selectFolderFromModal() {
-          this.stopAudio();
-          if (!this.modalCurrentPath) return;
-          if (this.browseTargetType === 'input') {
-            let finalPath = this.modalCurrentPath;
-            if (this.modalDirectories.includes('suno_exports')) {
-              finalPath = finalPath + '\\suno_exports';
-            }
-            this.targetPath = finalPath;
-            this.showFolderModal = false;
-            await this.scanFolder();
-          } else {
-            this.outputFolder = this.modalCurrentPath;
-            this.showFolderModal = false;
-            await this.checkOutputFolder(this.outputFolder);
-            await this.scanFolder();
-          }
-        },
-
-        async triggerOsBrowseDialog() {
-          this.showFolderModal = false;
-          await this.browseFolder(this.browseTargetType);
-        },
-
-        async browseFolder(type = 'input') {
-          this.stopAudio();
-          this.log(`Opening Windows Folder Dialog...`);
-          try {
-            const startPath = type === 'input' ? this.targetPath : (this.outputFolder || this.albumRoot);
-            const res = await fetch(`/api/browse-folder?type=${type}&start=` + encodeURIComponent(startPath || 'E:\\Music Projects'));
-            const data = await res.json();
-            if (data.folder) {
-              if (type === 'input') {
-                this.targetPath = data.folder;
-                await this.scanFolder();
-              } else {
-                this.outputFolder = data.folder;
-                await this.checkOutputFolder(this.outputFolder);
-                await this.scanFolder();
+          onAlbumSelected() {
+            this.stopAudio();
+            if (this.selectedAlbum) {
+              this.targetPath = this.selectedAlbum;
+              // Derivate default output folder
+              let albumRoot = this.selectedAlbum;
+              if (albumRoot.endsWith('\\') || albumRoot.endsWith('/')) albumRoot = albumRoot.slice(0, -1);
+              if (albumRoot.toLowerCase().endsWith('suno_exports')) {
+                albumRoot = albumRoot.substring(0, Math.max(albumRoot.lastIndexOf('\\'), albumRoot.lastIndexOf('/')));
               }
+              this.albumRoot = albumRoot;
+              this.outputFolder = albumRoot + '\\' + this.currentVersion;
+              this.scanFolder();
             }
-          } catch(e) {
-            this.log('Browse dialog failed: ' + e.message, 'error');
-          }
-        },
+          },
 
-        async openExplorer(targetFolder) {
-          if (!targetFolder) return;
-          this.log(`Opening Explorer for: ${targetFolder}...`);
-          try {
-            const res = await fetch('/api/open-explorer', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ targetFolder })
-            });
-            const data = await res.json();
-            if (data.opened) {
-              this.log(`Explorer opened: ${data.opened}`, 'success');
-            }
-          } catch(e) {
-            this.log('Explorer error: ' + e.message, 'error');
-          }
-        },
-
-        async createNewVersion() {
-          this.stopAudio();
-          if (!this.targetPath) return;
-          this.loading = true;
-          try {
-            const res = await fetch('/api/create-version', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ folderPath: this.targetPath })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error);
-            this.availableVersions = data.availableVersions;
-            this.currentVersion = data.newVersion;
+          onVersionSelected() {
+            this.stopAudio();
             if (this.albumRoot) {
               this.outputFolder = this.albumRoot + '\\' + this.currentVersion;
             }
-            this.acknowledgedFolders[this.outputFolder] = true; // brand new folder is clean
-            this.log(`Created new master version folder: ${data.newVersion}`, 'success');
-            await this.scanFolder();
-          } catch(e) {
-            this.log(`Error creating version folder: ${e.message}`, 'error');
-          } finally {
-            this.loading = false;
-          }
-        },
+            this.scanFolder();
+          },
 
-        async scanFolder() {
-          this.stopAudio();
-          if (!this.targetPath) return;
-          this.loading = true;
-          this.log(`Scanning input: ${this.targetPath} | Output: ${this.outputFolder || this.currentVersion}`);
-          try {
-            const res = await fetch('/api/scan-folder', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                folderPath: this.targetPath,
-                targetVersion: this.currentVersion,
-                outputFolder: this.outputFolder
-              })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error);
-            
-            this.albumRoot = data.albumRoot;
-            this.availableVersions = data.availableVersions || ['mastered_versions'];
-            this.currentVersion = data.currentVersion || 'mastered_versions';
-            if (!this.outputFolder || !this.outputFolder.trim()) {
-              this.outputFolder = data.outputFolder;
+          async onOutputFolderManualChange() {
+            this.stopAudio();
+            if (this.outputFolder) {
+              await this.checkOutputFolder(this.outputFolder);
+              await this.scanFolder();
             }
-            this.existingOutputCount = data.existingOutputCount || 0;
+          },
 
-            // Trigger acknowledge warning modal once if existing files found and not yet acknowledged
-            if (this.existingOutputCount > 0 && !this.acknowledgedFolders[this.outputFolder]) {
-              this.showWarningModal = true;
-            }
-
-            this.tracks = data.tracks.map(t => {
-              const prevTrack = (this.tracks || []).find(p => p.name === t.name);
-              const isDirect = (this.directMasterMode !== undefined ? this.directMasterMode : (prevTrack?.isDirect ?? (t.hasMastered && !t.hasMixed)));
-              const existingMasterPreset = t.masterStats?.preset || t.masterStats?.appliedPreset;
-              return {
-                ...t,
-                preset: prevTrack?.preset || (this.globalPreset && this.globalPreset !== 'auto' ? this.globalPreset : (existingMasterPreset || 'auto')),
-                showStats: false,
-                isProcessing: null,
-                isDirect: isDirect,
-                splitSkipped: isDirect,
-                mixSkipped: isDirect
-              };
-            });
-            
-            this.log(`Found ${this.tracks.length} tracks. Master destination has ${this.existingOutputCount} files.`, 'success');
-          } catch (e) {
-            this.log(`Error scanning folder: ${e.message}`, 'error');
-          } finally {
-            this.loading = false;
-          }
-        },
-
-        async executeAction(endpoint, payload) {
-          this.loading = true;
-          this.log(`Starting task on ${endpoint}...`);
-          try {
-            const res = await fetch(endpoint, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Server Error');
-            this.log(`Success!`, 'success');
-            this.log(data);
-            return data;
-          } catch (e) {
-            this.log(`Error: ${e.message}`, 'error');
-            return null;
-          } finally {
-            this.loading = false;
-          }
-        },
-
-        async runRowAction(action, track, shouldScan = true) {
-          if (!this.isReadyToProcess()) {
-            this.log('Both Input Folder and Output Folder must be specified before starting processing.', 'error');
-            return false;
-          }
-
-          track.isProcessing = action;
-          let success = false;
-          try {
-            if (action === 'analyze') {
-              const res = await this.executeAction('/api/analyze', { targetFile: track.fullPath });
-              if (res) {
-                success = true;
-                track.hasAnalyzed = true;
-                track.rawAnalysis = res;
-                this.log(`Analyzed raw audio for ${track.name}`, 'success');
-              }
-            } else if (action === 'split') {
-              const res = await this.executeAction('/api/split', { targetFile: track.fullPath });
-              if (res) {
-                success = true;
-                track.hasSplit = true;
-              }
-            } else if (action === 'mix') {
-              const res = await this.executeAction('/api/mix', { targetFolder: track.fullPath, preset: track.preset });
-              if (res) {
-                success = true;
-                track.hasMixed = true;
-                if (res.mixdownFile) track.mixedFile = res.mixdownFile;
-              }
-            } else if (action === 'master') {
-              const masterTarget = track.mixedFile ? track.mixedFile : track.fullPath;
-              const res = await this.executeAction('/api/master', {
-                targetPath: masterTarget,
-                preset: track.preset,
-                outputFolder: this.outputFolder,
-                trackName: track.name
+          async checkOutputFolder(folder) {
+            try {
+              const res = await fetch('/api/check-output-folder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ outputFolder: folder })
               });
-              if (res) {
-                success = true;
-                track.hasMastered = true;
-                if (res.processedTracks && res.processedTracks[0]) {
-                  const pt = res.processedTracks[0];
-                  track.masteredFile = pt.outputWav;
-                  track.masterStats = pt;
+              const data = await res.json();
+              this.existingOutputCount = data.count || 0;
+              if (this.existingOutputCount > 0 && !this.acknowledgedFolders[folder]) {
+                this.showWarningModal = true;
+              }
+            } catch (e) {}
+          },
+
+          acknowledgeWarning() {
+            if (this.outputFolder) {
+              this.acknowledgedFolders[this.outputFolder] = true;
+            }
+            this.showWarningModal = false;
+            this.log(`Output folder acknowledged: ${this.outputFolder}`, 'info');
+          },
+
+          log(msg, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            let formatted = msg;
+            if (typeof msg === 'object') {
+              formatted = `<pre class="mt-2 text-gray-400 bg-gray-900/50 p-2 rounded border border-gray-800 overflow-x-auto">${JSON.stringify(msg, null, 2)}</pre>`;
+            }
+            this.consoleLogs.push({ type, msg: `<span class="text-gray-500">[${timestamp}]</span> ${formatted}` });
+            setTimeout(() => {
+              const container = document.querySelector('.overflow-y-auto');
+              if (container) container.scrollTop = container.scrollHeight;
+            }, 50);
+          },
+
+          async openFolderModal(type = 'input') {
+            this.browseTargetType = type;
+            let start = type === 'input' ? this.targetPath : this.outputFolder || this.albumRoot;
+            if (!start || !start.trim()) start = 'E:\\Music Projects';
+            await this.loadDirectory(start);
+            this.showFolderModal = true;
+          },
+
+          async loadDirectory(targetDir) {
+            try {
+              const res = await fetch('/api/list-directory?path=' + encodeURIComponent(targetDir));
+              const data = await res.json();
+              if (res.ok) {
+                this.modalCurrentPath = data.currentPath;
+                this.modalDirectories = data.directories || [];
+                this.modalParentPath = data.parentPath;
+              }
+            } catch (e) {
+              this.log('Error reading directory: ' + e.message, 'error');
+            }
+          },
+
+          async navigateFolderUp() {
+            if (this.modalParentPath) {
+              await this.loadDirectory(this.modalParentPath);
+            }
+          },
+
+          async selectFolderFromModal() {
+            this.stopAudio();
+            if (!this.modalCurrentPath) return;
+            if (this.browseTargetType === 'input') {
+              let finalPath = this.modalCurrentPath;
+              if (this.modalDirectories.includes('suno_exports')) {
+                finalPath = finalPath + '\\suno_exports';
+              }
+              this.targetPath = finalPath;
+              this.showFolderModal = false;
+              await this.scanFolder();
+            } else {
+              this.outputFolder = this.modalCurrentPath;
+              this.showFolderModal = false;
+              await this.checkOutputFolder(this.outputFolder);
+              await this.scanFolder();
+            }
+          },
+
+          async triggerOsBrowseDialog() {
+            this.showFolderModal = false;
+            await this.browseFolder(this.browseTargetType);
+          },
+
+          async browseFolder(type = 'input') {
+            this.stopAudio();
+            this.log(`Opening Windows Folder Dialog...`);
+            try {
+              const startPath = type === 'input' ? this.targetPath : this.outputFolder || this.albumRoot;
+              const res = await fetch(
+                `/api/browse-folder?type=${type}&start=` + encodeURIComponent(startPath || 'E:\\Music Projects')
+              );
+              const data = await res.json();
+              if (data.folder) {
+                if (type === 'input') {
+                  this.targetPath = data.folder;
+                  await this.scanFolder();
+                } else {
+                  this.outputFolder = data.folder;
+                  await this.checkOutputFolder(this.outputFolder);
+                  await this.scanFolder();
                 }
               }
-            } else if (action === 'report') {
-              let targetMaster = track.masteredFile;
-              if (!targetMaster && this.outputFolder) {
-                targetMaster = `${this.outputFolder}\\wav\\${track.name.replace(/^\d+[\s_-]*/, '')}.wav`;
-              }
-              const res = await this.executeAction('/api/quality-report', {
-                masteredFile: targetMaster || track.name,
-                rawFile: track.fullPath,
-                outputFolder: this.outputFolder,
-                preset: track.preset || this.globalPreset
-              });
-              if (res) {
-                success = true;
-                track.masterStats = res;
-                this.log(`Quality Report generated & saved for ${track.name}`, 'success');
-              }
+            } catch (e) {
+              this.log('Browse dialog failed: ' + e.message, 'error');
             }
-          } finally {
-            track.isProcessing = null;
-          }
-          
-          if (success && shouldScan) {
-            await this.scanFolder();
-          }
-          return success;
-        },
+          },
 
-        async batchProcessColumn(action) {
-          if (!this.isReadyToProcess()) {
-            this.log('Both Input Folder and Output Folder must be specified before starting processing.', 'error');
-            return;
-          }
+          async openExplorer(targetFolder) {
+            if (!targetFolder) return;
+            this.log(`Opening Explorer for: ${targetFolder}...`);
+            try {
+              const res = await fetch('/api/open-explorer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetFolder })
+              });
+              const data = await res.json();
+              if (data.opened) {
+                this.log(`Explorer opened: ${data.opened}`, 'success');
+              }
+            } catch (e) {
+              this.log('Explorer error: ' + e.message, 'error');
+            }
+          },
 
-          this.isBatchRunning = true;
-          this.abortRequested = false;
-          this.log(`Starting Batch Processing for column: ${action.toUpperCase()}`, 'info');
-          try {
-            for (let i = 0; i < this.tracks.length; i++) {
-               if (this.abortRequested) {
-                 this.log(`⏹ Batch ${action.toUpperCase()} aborted by user.`, 'warning');
-                 break;
-               }
-               const track = this.tracks[i];
-               if (action === 'analyze') {
+          async createNewVersion() {
+            this.stopAudio();
+            if (!this.targetPath) return;
+            this.loading = true;
+            try {
+              const res = await fetch('/api/create-version', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ folderPath: this.targetPath })
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error);
+              this.availableVersions = data.availableVersions;
+              this.currentVersion = data.newVersion;
+              if (this.albumRoot) {
+                this.outputFolder = this.albumRoot + '\\' + this.currentVersion;
+              }
+              this.acknowledgedFolders[this.outputFolder] = true; // brand new folder is clean
+              this.log(`Created new master version folder: ${data.newVersion}`, 'success');
+              await this.scanFolder();
+            } catch (e) {
+              this.log(`Error creating version folder: ${e.message}`, 'error');
+            } finally {
+              this.loading = false;
+            }
+          },
+
+          async scanFolder() {
+            this.stopAudio();
+            if (!this.targetPath) return;
+            this.loading = true;
+            this.log(`Scanning input: ${this.targetPath} | Output: ${this.outputFolder || this.currentVersion}`);
+            try {
+              const res = await fetch('/api/scan-folder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  folderPath: this.targetPath,
+                  targetVersion: this.currentVersion,
+                  outputFolder: this.outputFolder
+                })
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error);
+
+              this.albumRoot = data.albumRoot;
+              this.availableVersions = data.availableVersions || ['mastered_versions'];
+              this.currentVersion = data.currentVersion || 'mastered_versions';
+              if (!this.outputFolder || !this.outputFolder.trim()) {
+                this.outputFolder = data.outputFolder;
+              }
+              this.existingOutputCount = data.existingOutputCount || 0;
+
+              // Trigger acknowledge warning modal once if existing files found and not yet acknowledged
+              if (this.existingOutputCount > 0 && !this.acknowledgedFolders[this.outputFolder]) {
+                this.showWarningModal = true;
+              }
+
+              this.tracks = data.tracks.map(t => {
+                const prevTrack = (this.tracks || []).find(p => p.name === t.name);
+                const isDirect =
+                  this.directMasterMode !== undefined
+                    ? this.directMasterMode
+                    : (prevTrack?.isDirect ?? (t.hasMastered && !t.hasMixed));
+                const existingMasterPreset = t.masterStats?.preset || t.masterStats?.appliedPreset;
+                return {
+                  ...t,
+                  preset:
+                    prevTrack?.preset ||
+                    (this.globalPreset && this.globalPreset !== 'auto'
+                      ? this.globalPreset
+                      : existingMasterPreset || 'auto'),
+                  showStats: false,
+                  isProcessing: null,
+                  isDirect: isDirect,
+                  splitSkipped: isDirect,
+                  mixSkipped: isDirect
+                };
+              });
+
+              this.log(
+                `Found ${this.tracks.length} tracks. Master destination has ${this.existingOutputCount} files.`,
+                'success'
+              );
+            } catch (e) {
+              this.log(`Error scanning folder: ${e.message}`, 'error');
+            } finally {
+              this.loading = false;
+            }
+          },
+
+          async executeAction(endpoint, payload) {
+            this.loading = true;
+            this.log(`Starting task on ${endpoint}...`);
+            try {
+              const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || 'Server Error');
+              this.log(`Success!`, 'success');
+              this.log(data);
+              return data;
+            } catch (e) {
+              this.log(`Error: ${e.message}`, 'error');
+              return null;
+            } finally {
+              this.loading = false;
+            }
+          },
+
+          async runRowAction(action, track, shouldScan = true) {
+            if (!this.isReadyToProcess()) {
+              this.log('Both Input Folder and Output Folder must be specified before starting processing.', 'error');
+              return false;
+            }
+
+            track.isProcessing = action;
+            let success = false;
+            try {
+              if (action === 'analyze') {
+                const res = await this.executeAction('/api/analyze', { targetFile: track.fullPath });
+                if (res) {
+                  success = true;
+                  track.hasAnalyzed = true;
+                  track.rawAnalysis = res;
+                  this.log(`Analyzed raw audio for ${track.name}`, 'success');
+                }
+              } else if (action === 'split') {
+                const res = await this.executeAction('/api/split', { targetFile: track.fullPath });
+                if (res) {
+                  success = true;
+                  track.hasSplit = true;
+                }
+              } else if (action === 'mix') {
+                const res = await this.executeAction('/api/mix', {
+                  targetFolder: track.fullPath,
+                  preset: track.preset
+                });
+                if (res) {
+                  success = true;
+                  track.hasMixed = true;
+                  if (res.mixdownFile) track.mixedFile = res.mixdownFile;
+                }
+              } else if (action === 'master') {
+                const masterTarget = track.mixedFile ? track.mixedFile : track.fullPath;
+                const res = await this.executeAction('/api/master', {
+                  targetPath: masterTarget,
+                  preset: track.preset,
+                  outputFolder: this.outputFolder,
+                  trackName: track.name
+                });
+                if (res) {
+                  success = true;
+                  track.hasMastered = true;
+                  if (res.processedTracks && res.processedTracks[0]) {
+                    const pt = res.processedTracks[0];
+                    track.masteredFile = pt.outputWav;
+                    track.masterStats = pt;
+                  }
+                }
+              } else if (action === 'report') {
+                let targetMaster = track.masteredFile;
+                if (!targetMaster && this.outputFolder) {
+                  targetMaster = `${this.outputFolder}\\wav\\${track.name.replace(/^\d+[\s_-]*/, '')}.wav`;
+                }
+                const res = await this.executeAction('/api/quality-report', {
+                  masteredFile: targetMaster || track.name,
+                  rawFile: track.fullPath,
+                  outputFolder: this.outputFolder,
+                  preset: track.preset || this.globalPreset
+                });
+                if (res) {
+                  success = true;
+                  track.masterStats = res;
+                  this.log(`Quality Report generated & saved for ${track.name}`, 'success');
+                }
+              }
+            } finally {
+              track.isProcessing = null;
+            }
+
+            if (success && shouldScan) {
+              await this.scanFolder();
+            }
+            return success;
+          },
+
+          async batchProcessColumn(action) {
+            if (!this.isReadyToProcess()) {
+              this.log('Both Input Folder and Output Folder must be specified before starting processing.', 'error');
+              return;
+            }
+
+            this.isBatchRunning = true;
+            this.abortRequested = false;
+            this.log(`Starting Batch Processing for column: ${action.toUpperCase()}`, 'info');
+            try {
+              for (let i = 0; i < this.tracks.length; i++) {
+                if (this.abortRequested) {
+                  this.log(`⏹ Batch ${action.toUpperCase()} aborted by user.`, 'warning');
+                  break;
+                }
+                const track = this.tracks[i];
+                if (action === 'analyze') {
                   this.log(`[Batch] Analyzing ${track.name}...`);
                   await this.runRowAction('analyze', track, false);
-               } else if (action === 'split' && !track.hasSplit) {
+                } else if (action === 'split' && !track.hasSplit) {
                   this.log(`[Batch] Splitting ${track.name}...`);
                   await this.runRowAction('split', track, false);
-               } else if (action === 'mix' && track.hasSplit) {
+                } else if (action === 'mix' && track.hasSplit) {
                   this.log(`[Batch] Mixing ${track.name} with profile '${track.preset}'...`);
                   await this.runRowAction('mix', track, false);
-               } else if (action === 'master' && (track.hasMixed || track.hasSplit)) {
+                } else if (action === 'master' && (track.hasMixed || track.hasSplit)) {
                   this.log(`[Batch] Mastering ${track.name} with profile '${track.preset}'...`);
                   await this.runRowAction('master', track, false);
-               }
+                }
+              }
+            } finally {
+              this.isBatchRunning = false;
+              this.abortRequested = false;
+              this.loading = false;
+              await this.scanFolder();
+              this.log(`Batch Processing for ${action.toUpperCase()} finished.`, 'success');
             }
-          } finally {
-            this.isBatchRunning = false;
+          },
+
+          async batchProcessQualityReport() {
+            if (!this.isReadyToProcess()) {
+              this.log('Both Input Folder and Output Folder must be specified before generating reports.', 'error');
+              return;
+            }
+
+            this.isBatchRunning = true;
             this.abortRequested = false;
-            this.loading = false;
-            await this.scanFolder();
-            this.log(`Batch Processing for ${action.toUpperCase()} finished.`, 'success');
-          }
-        },
-
-        async batchProcessQualityReport() {
-          if (!this.isReadyToProcess()) {
-            this.log('Both Input Folder and Output Folder must be specified before generating reports.', 'error');
-            return;
-          }
-
-          this.isBatchRunning = true;
-          this.abortRequested = false;
-          this.log(`Starting Quality Report generation for all mastered tracks in ${this.outputFolder}...`, 'info');
-          try {
-            for (let i = 0; i < this.tracks.length; i++) {
-               if (this.abortRequested) {
-                 this.log('⏹ Quality Report batch aborted by user.', 'warning');
-                 break;
-               }
-               const track = this.tracks[i];
-               if (track.hasMastered) {
+            this.log(`Starting Quality Report generation for all mastered tracks in ${this.outputFolder}...`, 'info');
+            try {
+              for (let i = 0; i < this.tracks.length; i++) {
+                if (this.abortRequested) {
+                  this.log('⏹ Quality Report batch aborted by user.', 'warning');
+                  break;
+                }
+                const track = this.tracks[i];
+                if (track.hasMastered) {
                   this.log(`[Quality Report] Analyzing master: ${track.name}...`);
                   await this.runRowAction('report', track, false);
-               }
+                }
+              }
+            } finally {
+              this.isBatchRunning = false;
+              this.abortRequested = false;
+              this.loading = false;
+              await this.scanFolder();
+              this.log('Quality Reports process finished.', 'success');
             }
-          } finally {
-            this.isBatchRunning = false;
+          },
+
+          async batchProcessMissing() {
+            if (!this.isReadyToProcess()) {
+              this.log('Both Input Folder and Output Folder must be specified before starting processing.', 'error');
+              return;
+            }
+
+            this.isBatchRunning = true;
             this.abortRequested = false;
-            this.loading = false;
-            await this.scanFolder();
-            this.log('Quality Reports process finished.', 'success');
-          }
-        },
-
-        async batchProcessMissing() {
-          if (!this.isReadyToProcess()) {
-            this.log('Both Input Folder and Output Folder must be specified before starting processing.', 'error');
-            return;
-          }
-
-          this.isBatchRunning = true;
-          this.abortRequested = false;
-          this.log(`Checking missing steps for all tracks in: ${this.outputFolder}...`, 'info');
-          let countProcessed = 0;
-          try {
-            for (let i = 0; i < this.tracks.length; i++) {
-               if (this.abortRequested) {
-                 this.log('⏹ Process Missing batch aborted by user.', 'warning');
-                 break;
-               }
-               const track = this.tracks[i];
-               if (!track.hasAnalyzed) {
+            this.log(`Checking missing steps for all tracks in: ${this.outputFolder}...`, 'info');
+            let countProcessed = 0;
+            try {
+              for (let i = 0; i < this.tracks.length; i++) {
+                if (this.abortRequested) {
+                  this.log('⏹ Process Missing batch aborted by user.', 'warning');
+                  break;
+                }
+                const track = this.tracks[i];
+                if (!track.hasAnalyzed) {
                   countProcessed++;
                   this.log(`[Step 1/4] Analyzing raw audio: ${track.name}...`);
                   await this.runRowAction('analyze', track, false);
-               }
-               if (this.abortRequested) break;
-               if (!track.hasSplit) {
+                }
+                if (this.abortRequested) break;
+                if (!track.hasSplit) {
                   countProcessed++;
                   this.log(`[Step 2/4] Splitting stems: ${track.name}...`);
                   await this.runRowAction('split', track, false);
-               }
-               if (this.abortRequested) break;
-               if (!track.hasMixed) {
+                }
+                if (this.abortRequested) break;
+                if (!track.hasMixed) {
                   countProcessed++;
                   this.log(`[Step 3/4] Mixing stems: ${track.name}...`);
                   await this.runRowAction('mix', track, false);
-               }
-               if (this.abortRequested) break;
-               if (!track.hasMastered) {
+                }
+                if (this.abortRequested) break;
+                if (!track.hasMastered) {
                   countProcessed++;
                   this.log(`[Step 4/4] Mastering: ${track.name} into ${this.outputFolder}...`);
                   await this.runRowAction('master', track, false);
-               }
-               if (this.abortRequested) break;
-               if (track.hasMastered && !track.masterStats) {
+                }
+                if (this.abortRequested) break;
+                if (track.hasMastered && !track.masterStats) {
                   countProcessed++;
                   this.log(`[Report] Generating Quality Report for ${track.name}...`);
                   await this.runRowAction('report', track, false);
-               }
+                }
+              }
+            } finally {
+              this.isBatchRunning = false;
+              this.abortRequested = false;
+              this.loading = false;
+              await this.scanFolder();
+              if (countProcessed === 0) {
+                this.log(
+                  `All tracks in this folder are already fully processed! If you changed DSP profiles and want to apply them, click '⚡ Re-Mix & Master All'.`,
+                  'info'
+                );
+              } else {
+                this.log(`Batch processed ${countProcessed} missing steps successfully!`, 'success');
+              }
             }
-          } finally {
-            this.isBatchRunning = false;
+          },
+
+          async batchDirectMasterAll() {
+            if (!this.isReadyToProcess()) {
+              this.log('Both Input Folder and Output Folder must be specified before processing.', 'error');
+              return;
+            }
+
+            this.isBatchRunning = true;
             this.abortRequested = false;
-            this.loading = false;
-            await this.scanFolder();
-            if (countProcessed === 0) {
-              this.log(`All tracks in this folder are already fully processed! If you changed DSP profiles and want to apply them, click '⚡ Re-Mix & Master All'.`, 'info');
-            } else {
-              this.log(`Batch processed ${countProcessed} missing steps successfully!`, 'success');
-            }
-          }
-        },
+            this.directMasterMode = true;
+            this.log(
+              `✨ Starting Pure Direct 2-Pass Mastering for all ${this.tracks.length} tracks (Pristine Raw Source, Zero AI Stem Artifacts)...`,
+              'info'
+            );
+            try {
+              for (let i = 0; i < this.tracks.length; i++) {
+                if (this.abortRequested) {
+                  this.log('⏹ Pure Direct Mastering batch aborted by user.', 'warning');
+                  break;
+                }
+                const track = this.tracks[i];
+                track.isDirect = true;
+                track.splitSkipped = true;
+                track.mixSkipped = true;
 
-        async batchDirectMasterAll() {
-          if (!this.isReadyToProcess()) {
-            this.log('Both Input Folder and Output Folder must be specified before processing.', 'error');
-            return;
-          }
-
-          this.isBatchRunning = true;
-          this.abortRequested = false;
-          this.directMasterMode = true;
-          this.log(`✨ Starting Pure Direct 2-Pass Mastering for all ${this.tracks.length} tracks (Pristine Raw Source, Zero AI Stem Artifacts)...`, 'info');
-          try {
-            for (let i = 0; i < this.tracks.length; i++) {
-               if (this.abortRequested) {
-                 this.log('⏹ Pure Direct Mastering batch aborted by user.', 'warning');
-                 break;
-               }
-               const track = this.tracks[i];
-               track.isDirect = true;
-               track.splitSkipped = true;
-               track.mixSkipped = true;
-
-               // Step 1: Analyze raw audio
-               if (!track.hasAnalyzed) {
+                // Step 1: Analyze raw audio
+                if (!track.hasAnalyzed) {
                   this.log(`[1/3] Analyzing: ${track.name}...`);
                   await this.runRowAction('analyze', track, false);
-               }
-               if (this.abortRequested) break;
+                }
+                if (this.abortRequested) break;
 
-               // Step 2: Direct 2-Pass Master from raw WAV
-               const effectivePreset = track.preset || this.globalPreset || 'auto';
-               this.log(`[2/3] Pure Mastering from Raw with profile '${effectivePreset}': ${track.name}...`);
-               track.isProcessing = 'master';
-               try {
-                 const res = await this.executeAction('/api/master', {
-                   targetPath: track.fullPath,
-                   preset: effectivePreset,
-                   outputFolder: this.outputFolder,
-                   trackName: track.name
-                 });
-                 if (res) {
-                   track.hasMastered = true;
-                   if (res.processedTracks && res.processedTracks[0]) {
-                     const pt = res.processedTracks[0];
-                     track.masteredFile = pt.outputWav;
-                     track.masterStats = pt;
-                   }
-                 }
-               } finally {
-                 track.isProcessing = null;
-               }
-               if (this.abortRequested) break;
+                // Step 2: Direct 2-Pass Master from raw WAV
+                const effectivePreset = track.preset || this.globalPreset || 'auto';
+                this.log(`[2/3] Pure Mastering from Raw with profile '${effectivePreset}': ${track.name}...`);
+                track.isProcessing = 'master';
+                try {
+                  const res = await this.executeAction('/api/master', {
+                    targetPath: track.fullPath,
+                    preset: effectivePreset,
+                    outputFolder: this.outputFolder,
+                    trackName: track.name
+                  });
+                  if (res) {
+                    track.hasMastered = true;
+                    if (res.processedTracks && res.processedTracks[0]) {
+                      const pt = res.processedTracks[0];
+                      track.masteredFile = pt.outputWav;
+                      track.masterStats = pt;
+                    }
+                  }
+                } finally {
+                  track.isProcessing = null;
+                }
+                if (this.abortRequested) break;
 
-               // Step 3: Refresh Quality Report
-               this.log(`[3/3] Generating Quality Report: ${track.name}...`);
-               await this.runRowAction('report', track, false);
+                // Step 3: Refresh Quality Report
+                this.log(`[3/3] Generating Quality Report: ${track.name}...`);
+                await this.runRowAction('report', track, false);
+              }
+            } finally {
+              this.isBatchRunning = false;
+              this.abortRequested = false;
+              this.loading = false;
+              await this.scanFolder();
+              this.log('✨ Pure Direct Mastering workflow complete!', 'success');
             }
-          } finally {
-            this.isBatchRunning = false;
+          },
+
+          async batchRemixAndMasterAll() {
+            if (!this.isReadyToProcess()) {
+              this.log('Both Input Folder and Output Folder must be specified before processing.', 'error');
+              return;
+            }
+
+            this.isBatchRunning = true;
             this.abortRequested = false;
-            this.loading = false;
-            await this.scanFolder();
-            this.log('✨ Pure Direct Mastering workflow complete!', 'success');
-          }
-        },
+            this.directMasterMode = false;
+            this.log(
+              `⚡ Starting Full Re-Mix & Master for all ${this.tracks.length} tracks with profile: ${this.globalPreset}...`,
+              'info'
+            );
+            try {
+              for (let i = 0; i < this.tracks.length; i++) {
+                if (this.abortRequested) {
+                  this.log('⏹ Re-Mix & Master batch aborted by user.', 'warning');
+                  break;
+                }
+                const track = this.tracks[i];
+                track.isDirect = false;
+                track.splitSkipped = false;
+                track.mixSkipped = false;
 
-        async batchRemixAndMasterAll() {
-          if (!this.isReadyToProcess()) {
-            this.log('Both Input Folder and Output Folder must be specified before processing.', 'error');
-            return;
-          }
-
-          this.isBatchRunning = true;
-          this.abortRequested = false;
-          this.directMasterMode = false;
-          this.log(`⚡ Starting Full Re-Mix & Master for all ${this.tracks.length} tracks with profile: ${this.globalPreset}...`, 'info');
-          try {
-            for (let i = 0; i < this.tracks.length; i++) {
-               if (this.abortRequested) {
-                 this.log('⏹ Re-Mix & Master batch aborted by user.', 'warning');
-                 break;
-               }
-               const track = this.tracks[i];
-               track.isDirect = false;
-               track.splitSkipped = false;
-               track.mixSkipped = false;
-
-               // Step 1: Ensure Analyze
-               if (!track.hasAnalyzed) {
+                // Step 1: Ensure Analyze
+                if (!track.hasAnalyzed) {
                   this.log(`[Step 1/4] Analyzing: ${track.name}...`);
                   await this.runRowAction('analyze', track, false);
-               }
-               if (this.abortRequested) break;
+                }
+                if (this.abortRequested) break;
 
-               // Step 2: Ensure Stems are split
-               if (!track.hasSplit) {
+                // Step 2: Ensure Stems are split
+                if (!track.hasSplit) {
                   this.log(`[Step 2/4] Splitting stems: ${track.name}...`);
                   await this.runRowAction('split', track, false);
-               }
-               if (this.abortRequested) break;
+                }
+                if (this.abortRequested) break;
 
-               // Step 3: Re-Mix with current DSP profile
-               const effectivePreset = track.preset || this.globalPreset || 'auto';
-               if (track.hasSplit) {
+                // Step 3: Re-Mix with current DSP profile
+                const effectivePreset = track.preset || this.globalPreset || 'auto';
+                if (track.hasSplit) {
                   this.log(`[Step 3/4] Re-Mixing stems with profile '${effectivePreset}': ${track.name}...`);
                   await this.runRowAction('mix', track, false);
-               }
-               if (this.abortRequested) break;
+                }
+                if (this.abortRequested) break;
 
-               // Step 4: Re-Master with current DSP profile
-               if (track.hasMixed || track.hasSplit) {
+                // Step 4: Re-Master with current DSP profile
+                if (track.hasMixed || track.hasSplit) {
                   this.log(`[Step 4/4] Re-Mastering with profile '${effectivePreset}': ${track.name}...`);
                   await this.runRowAction('master', track, false);
-               }
-               if (this.abortRequested) break;
+                }
+                if (this.abortRequested) break;
 
-               // Step 5: Refresh Quality Report
-               this.log(`[Report] Updating Quality Report: ${track.name}...`);
-               await this.runRowAction('report', track, false);
+                // Step 5: Refresh Quality Report
+                this.log(`[Report] Updating Quality Report: ${track.name}...`);
+                await this.runRowAction('report', track, false);
+              }
+            } finally {
+              this.isBatchRunning = false;
+              this.abortRequested = false;
+              this.loading = false;
+              await this.scanFolder();
+              this.log('⚡ Full Re-Mix & Master workflow complete!', 'success');
             }
-          } finally {
-            this.isBatchRunning = false;
-            this.abortRequested = false;
-            this.loading = false;
-            await this.scanFolder();
-            this.log('⚡ Full Re-Mix & Master workflow complete!', 'success');
-          }
-        },
+          },
 
-        async runGlobalSequence() {
-          if (!this.isReadyToProcess()) {
-            this.log('Both Input Folder and Output Folder must be specified before sequencing.', 'error');
-            return;
-          }
+          async runGlobalSequence() {
+            if (!this.isReadyToProcess()) {
+              this.log('Both Input Folder and Output Folder must be specified before sequencing.', 'error');
+              return;
+            }
 
-          this.log(`Starting Final Album Sequence for ${this.outputFolder}...`);
-          // Extract versionFolder name from outputFolder if it's inside albumRoot
-          let verFolder = 'mastered_versions';
-          if (this.outputFolder && this.albumRoot && this.outputFolder.startsWith(this.albumRoot)) {
-            verFolder = this.outputFolder.substring(this.albumRoot.length).replace(/^[\\/]+/, '');
+            this.log(`Starting Final Album Sequence for ${this.outputFolder}...`);
+            // Extract versionFolder name from outputFolder if it's inside albumRoot
+            let verFolder = 'mastered_versions';
+            if (this.outputFolder && this.albumRoot && this.outputFolder.startsWith(this.albumRoot)) {
+              verFolder = this.outputFolder.substring(this.albumRoot.length).replace(/^[\\/]+/, '');
+            }
+            await this.executeAction('/api/sequence', {
+              targetPath: this.albumRoot,
+              applyRenumbering: true,
+              versionFolder: verFolder
+            });
           }
-          await this.executeAction('/api/sequence', {
-            targetPath: this.albumRoot,
-            applyRenumbering: true,
-            versionFolder: verFolder
-          });
-        }
+        };
       }
-    }
-  </script>
-</body>
+    </script>
+  </body>
 </html>

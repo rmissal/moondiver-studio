@@ -24,6 +24,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check Code Quality (ESLint)
+        run: npm run lint
+
+      - name: Check Code Formatting (Prettier)
+        run: npm run format:check
+
       - name: Run Tests with V8 Coverage
         run: npm run test:coverage
 
