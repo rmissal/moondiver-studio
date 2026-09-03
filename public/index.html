@@ -756,7 +756,90 @@
           </div>
         </div>
 
-        <table class="w-full text-left border-collapse">
+        <!-- Empty State / Album Project Selector Hub -->
+        <template x-if="tracks.length === 0 && !loading">
+          <div class="py-12 px-6 text-center">
+            <div
+              class="w-16 h-16 bg-cyan-500/10 border border-cyan-500/30 rounded-3xl flex items-center justify-center mx-auto mb-4 text-cyan-400 shadow-xl"
+            >
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                />
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">Welcome to Moondiver Studio</h3>
+            <p class="text-sm text-gray-400 max-w-md mx-auto mb-8">
+              Please choose a project album below or browse for a source folder containing your raw Suno exports to
+              start mastering.
+            </p>
+
+            <!-- Discovered Album Projects Grid -->
+            <template x-if="albumList.length > 0">
+              <div class="max-w-3xl mx-auto mb-8">
+                <div class="text-xs font-bold uppercase tracking-wider text-cyan-400 mb-3 text-left">
+                  Available Music Projects in E:\Music Projects:
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+                  <template x-for="alb in albumList" :key="alb.name">
+                    <button
+                      @click="selectAlbumCard(alb)"
+                      class="bg-gray-800/80 hover:bg-gray-700/80 border border-gray-700 hover:border-cyan-500/60 p-4 rounded-xl text-left transition duration-200 group flex flex-col justify-between shadow-lg"
+                    >
+                      <div class="flex items-center gap-2.5 mb-2">
+                        <div
+                          class="w-8 h-8 rounded-lg bg-cyan-500/10 group-hover:bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0 transition"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                            />
+                          </svg>
+                        </div>
+                        <span
+                          class="text-sm font-bold text-gray-200 group-hover:text-cyan-300 transition truncate"
+                          x-text="alb.name"
+                        ></span>
+                      </div>
+                      <div
+                        class="flex items-center justify-between text-[11px] text-gray-400 mt-2 pt-2 border-t border-gray-700/50"
+                      >
+                        <span class="font-mono text-cyan-400/80">suno_exports</span>
+                        <span class="text-cyan-400 group-hover:translate-x-0.5 transition font-semibold">Open →</span>
+                      </div>
+                    </button>
+                  </template>
+                </div>
+              </div>
+            </template>
+
+            <!-- Browse Custom Folder Button -->
+            <div class="flex items-center justify-center gap-3">
+              <button
+                @click="openFolderModal('input')"
+                class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-2.5 px-6 rounded-xl text-sm shadow-xl transition flex items-center gap-2"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                  />
+                </svg>
+                Browse Custom Folder...
+              </button>
+            </div>
+          </div>
+        </template>
+
+        <table x-show="tracks.length > 0" class="w-full text-left border-collapse">
           <thead>
             <tr>
               <th colspan="3" class="border-b border-gray-700/80"></th>
@@ -1441,8 +1524,8 @@
     <script>
       function studioApp() {
         return {
-          targetPath: 'E:\\Music Projects\\Frozen Time\\suno_exports',
-          outputFolder: 'E:\\Music Projects\\Frozen Time\\mastered_versions_v1',
+          targetPath: '',
+          outputFolder: '',
           albumList: [],
           selectedAlbum: '',
           albumRoot: '',
@@ -1462,6 +1545,11 @@
           loading: false,
           isBatchRunning: false,
           abortRequested: false,
+
+          selectAlbumCard(alb) {
+            this.selectedAlbum = alb.path;
+            this.onAlbumSelected();
+          },
 
           stopBatchProcessing() {
             if (this.isBatchRunning) {
@@ -1631,7 +1719,9 @@
               this.albumList = data.albums || [];
             } catch (e) {}
 
-            await this.scanFolder();
+            if (this.targetPath) {
+              await this.scanFolder();
+            }
 
             setInterval(async () => {
               try {
