@@ -1,88 +1,114 @@
 # Moondiver Studio & Audio Mastering MCP Server
 
-Eine professionelle, Standalone Audio-Mastering-App mit lokalem Web-Dashboard (`localhost:3000`) und nativer Model Context Protocol (MCP) Integration fr **Google Antigravity**.
+[![CI](https://github.com/rmissal/moondiver-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/rmissal/moondiver-studio/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Erlaubt es, einzelne Audio-Dateien oder ganze Projektordner mit mageschneiderten Studio-Mastering-Profilen (New Age, Ambient, Instrumental, Cinematic, Pop etc.) automatisiert zu mastern, sowie per KI (Demucs) Stems zu splitten.
+A professional, standalone audio mastering suite with a local web dashboard (`localhost:3000`) and native Model Context Protocol (MCP) integration for **Google Antigravity**.
 
----
-
-## 🚀 Installation & Windows 11 Setup
-
-Da wir tiefgreifende KI-Bibliotheken (PyTorch CUDA für die RTX GPU) verwenden, kann die **Windows 11 Smart App Control** die heruntergeladenen Dateien blockieren (aufgrund fehlender Microsoft-Signaturen).
-
-Um das Studio in 1 Minute lauffähig zu machen, führe einfach unser universelles Setup-Skript aus. Es installiert Node-Abhängigkeiten, Python KI-Bibliotheken (ca. 2.5 GB) und konfiguriert vollautomatisch dein System (inklusive Smart App Control Bypass auf Windows):
-
-1. Terminal im Projektordner öffnen
-2. Setup starten: `node setup.js`
-
-**Nach der Installation:**
-App starten mit: `npm run ui` (Öffnet `localhost:3000`)
+Allows automated mastering of individual audio files or entire album project directories using tailored studio mastering profiles (New Age, Ambient, Instrumental, Cinematic, Rock, Pop, etc.), computing dramatic tension curves and track sequencing, AI-powered stem separation (Demucs) with automatic stem mixing, and artwork upscaling.
 
 ---
 
-## 🛠️ Enthaltene Tools
+## 🚀 Installation & Quick Start
+
+1. **Clone the repository and install dependencies:**
+   ```bash
+   git clone https://github.com/rmissal/moondiver-studio.git
+   cd moondiver-studio
+   npm install
+   ```
+
+2. **Start the Web Dashboard:**
+   ```bash
+   npm run ui
+   ```
+   *Opens the Mastering Dashboard in your browser at `http://localhost:3000`.*
+
+3. **Run Tests & Test Coverage:**
+   ```bash
+   npm test
+   npm run test:coverage
+   ```
+
+---
+
+## 🛠️ Included MCP Tools
+
+The repository provides the following tools via the Model Context Protocol (MCP) for Antigravity and LLM assistants:
 
 ### 1. `master_audio`
-Mastert Audio-Dateien (WAV, FLAC, MP3, AIFF etc.) einzeln oder stapelweise für ganze Verzeichnisse.
-
-**Parameter:**
-- `targetPath` *(string, erforderlich)*: Pfad zur Audio-Datei oder zum Projektordner.
-- `preset` *(string)*: Sound-Profil (`auto`, `new_age_ambient`, `cinematic_orchestral`, `acoustic_instrumental`, `meditation_chillout`, `streaming_pop_standard`, `custom` - Standard: `auto`).
-- `outputFolder` *(string)*: Optionaler Zielordner (Standard: Unterordner `mastered_versions` im Quellverzeichnis).
-- `targetLufs` *(number)*: Ziel-Lautheit in LUFS (z. B. `-16.0`).
-- `truePeak` *(number)*: Maximaler True-Peak Ceiling in dBTP (z. B. `-1.5`).
-- `lra` *(number)*: Ziel-Loudness Range in LU (z. B. `15.0`).
-- `stereoWidth` *(number)*: Stereoverbreiterungsfaktor (z. B. `1.15` für +15% Breite).
-- `highpassFreq` *(number)*: Infraschall-LowCut Frequenz in Hz (z. B. `25`).
-- `bassGainDb` *(number)*: Grundton-Wärme in dB bei 80Hz (z. B. `1.0`).
-- `midDeMudGainDb` *(number)*: Absenkung von Mitten-Mulm in dB bei 320Hz (z. B. `-1.0`).
-- `airTrebleGainDb` *(number)*: Seidiger Höhenglanz in dB bei 10.5kHz (z. B. `1.5`).
-- `bitDepth` *(integer)*: WAV-Bittiefe (`16`, `24`, `32` - Standard: `24`).
-- `createMp3` *(boolean)*: Erstellt automatisch parallel eine High-Quality MP3-Datei (Standard: `true`).
-- `mp3Bitrate` *(string)*: Bitrate für den MP3-Export (Standard: `320k`).
-- `suffix` *(string)*: Dateiendungs-Zusatz (Standard: `_Master`).
-
----
+Two-pass adaptive linear DSP mastering (Pass 1 loudness analysis + Pass 2 calibrated mastering with analog tape warmth, de-hiss, de-essing, stereo widening, anti-click micro fade-in, and reverb-tail fade-out). Exports 24-bit Lossless Studio WAV and 320 kbps MP3 files with stripped AI watermarks and embedded studio metadata tags.
 
 ### 2. `analyze_audio`
-Misst technische und psychoakustische Werte nach EBU R128 und erkennt das Genre:
-- Automatische Genre-Erkennung (`autoDetectedGenre`)
-- Integrated Loudness (LUFS)
-- True Peak (dBTP)
-- Loudness Range (LRA) & Crest-Faktor
-- Sample-Rate, Bit-Tiefe, Codec & Dauer
+Measures technical and psychoacoustic values compliant with EBU R128 and Apple Digital Masters standards:
+- EBU R128 Integrated Loudness (LUFS), True Peak (dBTP), Loudness Range (LRA), Crest Factor
+- Automatic acoustic genre classification
+- **Apple Music Quality & Compliance Score** (0–100% confidence rating)
+
+### 3. `sequence_album`
+Computes optimal album track sequences and dramatic tension arcs (`cinematic_journey`, `classic_3_act`, `meditation_descent`, `energy_wave`), renumbers audio files (`01 - ...`), generates M3U playlists (`album_wav.m3u`, `album_mp3.m3u`), and produces a detailed `TRACKLIST.md` with Mermaid energy diagrams.
+
+### 4. `mix_stems`
+AI-powered stem separation and fully automated stem mixing (Vocals, Bass, Drums, Other) with profile-based EQ, anti-bleed gating, and spatial acoustic balancing.
+
+### 5. `upscale_cover_art`
+AI/Lanczos-enhanced upscaling of album cover artwork to lossless high-resolution standards (up to 3000x3000 / 300 DPI).
+
+### 6. `list_mastering_presets`
+Returns all available mastering sound profiles and their DSP filter parameters.
 
 ---
 
-### 3. `list_mastering_presets`
-Gibt alle verfügbaren Sound-Profile und deren DSP-Einstellungen aus.
+## 🎛️ Mastering Profiles (Presets)
+
+| Preset | Target LUFS | True Peak | LRA | Stereo Width | Characteristics |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **`auto`** *(Default)* | *Dynamic* | `-1.5 dBTP` | *Dynamic* | *1.15* | **Intelligent acoustic analysis in Pass 1** + dynamic profile selection |
+| **`new_age_ambient`** | `-16.0` | `-1.5 dBTP` | `15.0` | `1.15` | Open, smooth, silky treble sheen, wide panorama for pads, flutes & piano |
+| **`cinematic_orchestral`** | `-15.0` | `-1.5 dBTP` | `18.0` | `1.10` | Enormous dynamic range for orchestral swells, strings & soundtracks with powerful sub bass |
+| **`acoustic_instrumental`** | `-16.0` | `-1.5 dBTP` | `14.0` | `1.06` | Clean, organic timbre for acoustic guitars, harp & solo instruments without harshness |
+| **`meditation_chillout`** | `-18.0` | `-1.5 dBTP` | `16.0` | `1.20` | Gentle, transparent, minimal compression, maximal spherical immersion |
+| **`streaming_pop_standard`** | `-14.0` | `-1.0 dBTP` | `10.0` | `1.00` | Punchy and assertive impact adhering to modern streaming radio standards |
+| **`stadium_live_rock`** | `-15.0` | `-1.5 dBTP` | `15.0` | `1.25` | Massive live stage, biting guitars, snappy drums and airy high-end atmosphere |
+| **`custom`** | *Custom* | *Custom* | *Custom* | *Custom* | Full manual control of all filters, frequencies, and gain parameters |
 
 ---
 
-## 🎛️ Klangprofile (Presets)
+## 🧪 Testing & Continuous Integration
 
-| Preset | Target LUFS | True Peak | LRA | Stereo Width | Charakteristik |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **`auto`** *(Default)* | *Dynamisch* | *Dynamisch* | *Dynamisch* | *Dynamisch* | **Intelligente Genre-Erkennung in Pass 1** + maßgeschneidertes Mastering |
-| **`new_age_ambient`** | `-16.0` | `-1.5 dBTP` | `15.0` | `1.15` | Offen, samtig, seidiger Glanz, breites Panorama für Pads & Flöten/Klavier |
-| **`cinematic_orchestral`** | `-16.0` | `-1.2 dBTP` | `18.0` | `1.10` | Enorme Dynamik für Orchester, Streicher, Soundtracks mit warmem Sub-Fundament |
-| **`acoustic_instrumental`** | `-15.0` | `-1.0 dBTP` | `13.0` | `1.05` | Klarer, natürlicher Klang für Gitarren, Harfe & Soloinstrumente ohne Härte |
-| **`meditation_chillout`** | `-18.0` | `-2.0 dBTP` | `16.0` | `1.20` | Sanft, absolut unaufdringlich, minimale Kompression, immersives Stereobild |
-| **`streaming_pop_standard`** | `-14.0` | `-1.0 dBTP` | `10.0` | `1.00` | Druckvoll und kompakt nach Spotify/Apple Music Standard |
+This project adheres to strict **Agentic Coding Standards** and includes an automated test harness:
+
+- **Test Runner:** [Vitest](https://vitest.dev/)
+- **Coverage Engine:** V8 with automated Markdown publishing to the GitHub Step Summary
+- **CI Pipeline:** GitHub Actions (`.github/workflows/ci.yml`) on every push and pull request
+
+```bash
+# Run test suite
+npm test
+
+# Run tests with V8 coverage report
+npm run test:coverage
+```
 
 ---
 
-## ⚙️ Antigravity Konfiguration
+## ⚙️ Antigravity & MCP Configuration
 
-In `~/.gemini/config/mcp_config.json` registriert:
+Add to `~/.gemini/config/mcp_config.json`:
+
 ```json
 {
   "mcpServers": {
     "audio-mastering": {
       "command": "node",
-      "args": ["e:/workspaces/Moondiver-Studio/index.js"]
+      "args": ["E:/workspaces/Moondiver-Studio/index.js"]
     }
   }
 }
 ```
 
+---
+
+## 📄 License
+
+This project is licensed under the **Apache License 2.0** – see the [LICENSE](LICENSE) file for details.

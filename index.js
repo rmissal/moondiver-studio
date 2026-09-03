@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Audio Mastering MCP Server
- * Model Context Protocol integration for SinnTaucher DSP Mastering
+ * Model Context Protocol integration for DSP Mastering
  */
 
 const { PRESETS } = require('./lib/presets');
@@ -32,13 +32,13 @@ const TOOLS = [
   },
   {
     name: 'sequence_album',
-    description: 'Computes optimal album track sequence and dramatic tension arcs (cinematic_journey, classic_3_act, meditation_descent, energy_wave), renumbers WAV/MP3 files, embeds SinnTaucher metadata, generates M3U playlists and TRACKLIST.md.',
+    description: 'Computes optimal album track sequence and dramatic tension arcs (cinematic_journey, classic_3_act, meditation_descent, energy_wave), renumbers WAV/MP3 files, embeds studio metadata, generates M3U playlists and TRACKLIST.md.',
     inputSchema: {
       type: 'object',
       properties: {
         targetPath: {
           type: 'string',
-          description: 'Absolute or relative path to the album project directory (e.g. "E:/Music Projects/Distant Dreams").'
+          description: 'Absolute or relative path to the album project directory.'
         },
         arcModel: {
           type: 'string',
@@ -59,7 +59,7 @@ const TOOLS = [
         },
         artist: {
           type: 'string',
-          description: 'Artist name for metadata tagging (default: "SinnTaucher").'
+          description: 'Artist name for metadata tagging.'
         },
         year: {
           type: 'string',
@@ -71,7 +71,7 @@ const TOOLS = [
   },
   {
     name: 'master_audio',
-    description: 'Performs Two-Pass Adaptive Linear Mastering with automatic acoustic genre classification, de-hiss, de-essing, analog tape warmth, stereo widening, anti-click micro fade-in, tail fade-out, SinnTaucher studio metadata, and dual wav/ + mp3/ export.',
+    description: 'Performs Two-Pass Adaptive Linear Mastering with automatic acoustic genre classification, de-hiss, de-essing, analog tape warmth, stereo widening, anti-click micro fade-in, tail fade-out, studio metadata, and dual wav/ + mp3/ export.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -143,7 +143,7 @@ const TOOLS = [
         },
         artist: {
           type: 'string',
-          description: 'Artist name for studio metadata (default: "SinnTaucher").'
+          description: 'Artist name for studio metadata.'
         },
         year: {
           type: 'string',

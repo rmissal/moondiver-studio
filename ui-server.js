@@ -574,5 +574,5 @@ app.post('/api/quality-report', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`SinnTaucher Studio Dashboard runs on http://localhost:${PORT}`);
+  console.log(`Moondiver Studio Dashboard runs on http://localhost:${PORT}`);
 });

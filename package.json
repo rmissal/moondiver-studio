@@ -1,11 +1,12 @@
 {
   "name": "audio-mastering-mcp",
   "version": "1.2.0",
-  "description": "Professional Two-Pass DSP Audio Mastering & Album Sequencing MCP Server for SinnTaucher",
+  "description": "Professional Two-Pass DSP Audio Mastering & Album Sequencing MCP Server",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "ui": "node ui-server.js"
   },
   "keywords": [
@@ -13,15 +14,15 @@
     "mastering",
     "audio",
     "ffmpeg",
-    "antigravity",
-    "sinntaucher"
+    "antigravity"
   ],
-  "author": "SinnTaucher",
-  "license": "ISC",
+  "author": "Moondiver Studio Contributors",
+  "license": "Apache-2.0",
   "dependencies": {
     "express": "^5.2.1"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.11",
     "vitest": "^4.1.11"
   }
 }
