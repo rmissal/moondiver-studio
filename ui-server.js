@@ -609,36 +609,45 @@ app.post('/api/quality-report', async (req, res) => {
       kpiComparison: {
         lufs: {
           beforeMeasured: rawMetrics ? `${rawMetrics.integratedLoudnessLufs} LUFS` : 'N/A',
-          afterTarget: `${masterMetrics.integratedLoudnessLufs} LUFS`,
+          afterMeasured: `${masterMetrics.integratedLoudnessLufs} LUFS`,
+          afterTarget: `${PRESETS[resolvedPresetKey]?.targetLufs || -16.0} LUFS`,
           before_measured: rawMetrics ? `${rawMetrics.integratedLoudnessLufs} LUFS` : 'N/A',
-          after_target: `${masterMetrics.integratedLoudnessLufs} LUFS`
+          after_measured: `${masterMetrics.integratedLoudnessLufs} LUFS`,
+          after_target: `${PRESETS[resolvedPresetKey]?.targetLufs || -16.0} LUFS`
         },
         truePeak: {
           beforeMeasured: rawMetrics ? `${rawMetrics.truePeakDbtp} dBTP` : 'N/A',
-          afterTarget: `${masterMetrics.truePeakDbtp} dBTP`,
+          afterMeasured: `${masterMetrics.truePeakDbtp} dBTP`,
+          afterTarget: `${PRESETS[resolvedPresetKey]?.truePeak || -1.5} dBTP`,
           before_measured: rawMetrics ? `${rawMetrics.truePeakDbtp} dBTP` : 'N/A',
-          after_target: `${masterMetrics.truePeakDbtp} dBTP`
+          after_measured: `${masterMetrics.truePeakDbtp} dBTP`,
+          after_target: `${PRESETS[resolvedPresetKey]?.truePeak || -1.5} dBTP`
         },
         loudnessRange: {
           beforeMeasured: rawMetrics ? `${rawMetrics.loudnessRangeLra} LU` : 'N/A',
-          afterTarget: `${masterMetrics.loudnessRangeLra} LU`,
+          afterMeasured: `${masterMetrics.loudnessRangeLra} LU`,
+          afterTarget: `${PRESETS[resolvedPresetKey]?.lra || 14.0} LU`,
           before_measured: rawMetrics ? `${rawMetrics.loudnessRangeLra} LU` : 'N/A',
-          after_target: `${masterMetrics.loudnessRangeLra} LU`
+          after_measured: `${masterMetrics.loudnessRangeLra} LU`,
+          after_target: `${PRESETS[resolvedPresetKey]?.lra || 14.0} LU`
         },
         appleMusicConfidence: appleRating
       },
       kpi_vergleich: {
         lufs: {
           before_measured: rawMetrics ? `${rawMetrics.integratedLoudnessLufs} LUFS` : 'N/A',
-          after_target: `${masterMetrics.integratedLoudnessLufs} LUFS`
+          after_measured: `${masterMetrics.integratedLoudnessLufs} LUFS`,
+          after_target: `${PRESETS[resolvedPresetKey]?.targetLufs || -16.0} LUFS`
         },
         truePeak: {
           before_measured: rawMetrics ? `${rawMetrics.truePeakDbtp} dBTP` : 'N/A',
-          after_target: `${masterMetrics.truePeakDbtp} dBTP`
+          after_measured: `${masterMetrics.truePeakDbtp} dBTP`,
+          after_target: `${PRESETS[resolvedPresetKey]?.truePeak || -1.5} dBTP`
         },
         loudnessRange: {
           before_measured: rawMetrics ? `${rawMetrics.loudnessRangeLra} LU` : 'N/A',
-          after_target: `${masterMetrics.loudnessRangeLra} LU`
+          after_measured: `${masterMetrics.loudnessRangeLra} LU`,
+          after_target: `${PRESETS[resolvedPresetKey]?.lra || 14.0} LU`
         },
         appleMusicConfidence: appleRating
       },

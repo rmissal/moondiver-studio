@@ -1330,14 +1330,14 @@
                         <span class="text-gray-500 w-14">LUFS:</span>
                         <span
                           class="text-gray-200 font-mono"
-                          x-text="(track.masterStats.kpi_vergleich?.lufs?.after_target || 'N/A')"
+                          x-text="(track.masterStats.kpi_vergleich?.lufs?.after_measured || track.masterStats.kpiComparison?.lufs?.afterMeasured || track.masterStats.kpi_vergleich?.lufs?.after_target || 'N/A')"
                         ></span>
                       </div>
-                      <div class="flex items-center gap-2" title="True Peak Headroom Target">
+                      <div class="flex items-center gap-2" title="True Peak Headroom (Measured)">
                         <span class="text-gray-500 w-14">Peak:</span>
                         <span
                           class="text-gray-200 font-mono"
-                          x-text="(track.masterStats.kpi_vergleich?.truePeak?.after_target || 'N/A')"
+                          x-text="(track.masterStats.kpi_vergleich?.truePeak?.after_measured || track.masterStats.kpiComparison?.truePeak?.afterMeasured || track.masterStats.kpi_vergleich?.truePeak?.after_target || 'N/A')"
                         ></span>
                       </div>
                     </div>
