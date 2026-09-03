@@ -256,22 +256,64 @@ app.get('/api/browse-folder', (req, res) => {
   });
 });
 
-// API: Stream Audio File for Playback
+// API: Stream Audio File for Playback with Full HTTP 206 Byte-Range Support & Instant MP3 streaming
 app.get('/api/stream', (req, res) => {
-  const filePath = req.query.path;
+  let filePath = req.query.path;
   if (!filePath || !fs.existsSync(filePath)) {
     return res.status(404).send('Audio file not found');
   }
-  
-  const stat = fs.statSync(filePath);
-  res.writeHead(200, {
-    'Content-Type': filePath.endsWith('.mp3') ? 'audio/mpeg' : 'audio/wav',
-    'Content-Length': stat.size,
-    'Accept-Ranges': 'bytes'
-  });
-  
-  const readStream = fs.createReadStream(filePath);
-  readStream.pipe(res);
+
+  // If a 24-bit WAV file in a mastered folder is requested, use the companion 320kbps MP3 for instantaneous browser decoding & low bandwidth
+  if (filePath.toLowerCase().endsWith('.wav')) {
+    const mp3Candidate = filePath.replace(/[/\\]wav[/\\]/i, path.sep + 'mp3' + path.sep).replace(/\.wav$/i, '.mp3');
+    if (fs.existsSync(mp3Candidate)) {
+      filePath = mp3Candidate;
+    }
+  }
+
+  try {
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+    const isMp3 = filePath.toLowerCase().endsWith('.mp3');
+    const isOgg = filePath.toLowerCase().endsWith('.ogg');
+    const isFlac = filePath.toLowerCase().endsWith('.flac');
+    const contentType = isMp3 ? 'audio/mpeg' : (isOgg ? 'audio/ogg' : (isFlac ? 'audio/flac' : 'audio/wav'));
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      
+      if (start >= fileSize) {
+        res.status(416).send('Requested range not satisfiable\n' + start + ' >= ' + fileSize);
+        return;
+      }
+      
+      const chunksize = (end - start) + 1;
+      const file = fs.createReadStream(filePath, { start, end });
+      const head = {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': contentType,
+        'Cache-Control': 'no-cache'
+      };
+      res.writeHead(206, head);
+      file.pipe(res);
+    } else {
+      const head = {
+        'Content-Length': fileSize,
+        'Content-Type': contentType,
+        'Accept-Ranges': 'bytes',
+        'Cache-Control': 'no-cache'
+      };
+      res.writeHead(200, head);
+      fs.createReadStream(filePath).pipe(res);
+    }
+  } catch (err) {
+    res.status(500).send(`Streaming error: ${err.message}`);
+  }
 });
 
 // API: Split Stems using Demucs
