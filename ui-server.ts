@@ -534,7 +534,14 @@ app.post('/api/quality-report', async (req, res) => {
           .replace(/^\d+[\s_-]*/, '')
           .replace(/\.wav$/i, '')
           .toLowerCase();
-        const m = wavs.find(w => w.toLowerCase().includes(cleanTarget));
+        const m = wavs.find(
+          w =>
+            w
+              .toLowerCase()
+              .replace(/^\d+[\s_-]*/, '')
+              .replace(/\.wav$/i, '')
+              .trim() === cleanTarget.trim()
+        );
         if (m) resolvedMasteredFile = path.join(outputFolder, 'wav', m);
       }
     }
