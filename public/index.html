@@ -228,7 +228,19 @@
           <tr class="text-gray-400 text-sm border-b border-gray-700/80">
             <th class="py-3 px-2" title="Audio track filename">Track Name</th>
             <th class="py-3 px-1 text-center w-12" title="Listen to original raw Suno export">Raw</th>
-            <th class="py-3 px-2" title="Target Acoustic Genre Profile">DSP Profile</th>
+            <th class="py-2 px-2">
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-gray-300 font-semibold" title="Target Acoustic Genre Profile">DSP Profile</span>
+                  <span class="text-[10px] text-cyan-400 font-normal uppercase tracking-wider" title="Sets this profile for all tracks">Set All</span>
+                </div>
+                <select x-model="globalPreset" @change="applyGlobalPreset()" class="bg-[#111827] border border-cyan-500/50 hover:border-cyan-400 rounded px-1.5 py-1 text-xs text-cyan-300 font-medium focus:outline-none focus:border-cyan-400 w-full max-w-[155px] shadow transition" title="Choose a DSP profile here to apply it to all tracks simultaneously">
+                  <template x-for="[key, p] in Object.entries(presets)" :key="key">
+                    <option :value="key" x-text="p.name" :selected="key === globalPreset"></option>
+                  </template>
+                </select>
+              </div>
+            </th>
             <th class="py-3 px-2 text-center bg-purple-900/10">
               <button @click="batchProcessColumn('split')" :disabled="!isReadyToProcess()" class="w-full flex flex-col items-center gap-1 hover:text-purple-400 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed" title="Step 1: Separate vocals, bass, drums, other stems using Demucs AI">
                 <span class="text-purple-300">1. Split</span>
@@ -451,9 +463,19 @@
         existingOutputCount: 0,
         showWarningModal: false,
         acknowledgedFolders: {},
+        globalPreset: 'auto',
         presets: {},
         tracks: [],
         loading: false,
+
+        applyGlobalPreset() {
+          if (!this.globalPreset) return;
+          this.tracks.forEach(track => {
+            track.preset = this.globalPreset;
+          });
+          const presetName = this.presets[this.globalPreset]?.name || this.globalPreset;
+          this.log(`Set DSP Profile for all ${this.tracks.length} tracks to: ${presetName}`, 'info');
+        },
         cpu: 0,
         gpu: 0,
         consoleLogs: [{type: 'system', msg: '> Moondiver DSP Engine ready.'}],
@@ -674,7 +696,7 @@
 
             this.tracks = data.tracks.map(t => ({
               ...t,
-              preset: 'auto',
+              preset: this.globalPreset || 'auto',
               showStats: false,
               isProcessing: null
             }));
