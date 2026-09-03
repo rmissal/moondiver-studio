@@ -293,17 +293,55 @@ app.post('/api/split', (req, res) => {
   });
 });
 
-// API: Open Explorer
+// API: Open Explorer in Windows
 app.post('/api/open-explorer', (req, res) => {
   const { targetFolder } = req.body;
   if (targetFolder) {
-    const { exec } = require('child_process');
-    exec(`explorer "${targetFolder}"`, (error) => {
-      if (error) console.error("Explorer Error: ", error);
-    });
-    return res.json({ success: true });
+    let folderToOpen = path.resolve(targetFolder);
+    if (!fs.existsSync(folderToOpen)) {
+      try {
+        fs.mkdirSync(folderToOpen, { recursive: true });
+      } catch {
+        folderToOpen = path.dirname(folderToOpen);
+      }
+    }
+    const child = spawn('explorer.exe', [folderToOpen], { detached: true, stdio: 'ignore' });
+    child.unref();
+    return res.json({ success: true, opened: folderToOpen });
   }
   res.status(400).json({ error: 'No folder provided' });
+});
+
+// API: List Directories for In-App Folder Navigator
+app.get('/api/list-directory', (req, res) => {
+  const reqPath = req.query.path || 'E:\\Music Projects';
+  let targetPath = path.resolve(reqPath);
+  if (!fs.existsSync(targetPath)) {
+    targetPath = 'E:\\Music Projects';
+  }
+  try {
+    const stat = fs.statSync(targetPath);
+    if (!stat.isDirectory()) {
+      targetPath = path.dirname(targetPath);
+    }
+    const entries = fs.readdirSync(targetPath, { withFileTypes: true });
+    const directories = entries
+      .filter(e => e.isDirectory())
+      .map(e => e.name)
+      .filter(name => !name.startsWith('.') && name !== 'node_modules' && name !== '$RECYCLE.BIN' && name !== 'System Volume Information')
+      .sort((a, b) => a.localeCompare(b));
+
+    const parentPath = path.dirname(targetPath);
+    const hasParent = parentPath !== targetPath;
+
+    res.json({
+      currentPath: targetPath,
+      parentPath: hasParent ? parentPath : null,
+      directories
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 let lastCpuTime = { idle: 0, total: 0 };
