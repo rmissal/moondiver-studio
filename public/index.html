@@ -286,10 +286,7 @@
             <th class="py-3 px-1 text-center w-12" title="Listen to original raw Suno export">Raw</th>
             <th class="py-2 px-2 w-44">
               <div class="flex flex-col gap-1 w-44">
-                <div class="flex items-center justify-between">
-                  <span class="text-xs text-gray-300 font-semibold" title="Target Acoustic Genre Profile">DSP Profile</span>
-                  <span class="text-[9px] bg-cyan-900/50 text-cyan-300 border border-cyan-500/30 px-1.5 py-0.5 rounded font-semibold tracking-wider" title="Sets this profile for all tracks">SET ALL</span>
-                </div>
+                <span class="text-xs text-gray-300 font-semibold truncate" title="Target Acoustic Genre Profile">DSP Profile (Set all...)</span>
                 <select x-model="globalPreset" @change="applyGlobalPreset()" class="w-full bg-[#111827] border border-cyan-500/50 hover:border-cyan-400 rounded px-2 py-1 text-xs text-cyan-300 font-medium focus:outline-none focus:border-cyan-400 shadow transition" title="Choose a DSP profile here to apply it to all tracks simultaneously">
                   <template x-for="[key, p] in Object.entries(presets)" :key="key">
                     <option :value="key" x-text="p.name" :selected="key === globalPreset"></option>
@@ -325,16 +322,17 @@
                 <span class="text-[10px] bg-gray-700 group-hover:bg-emerald-600/50 text-white px-2 py-0.5 rounded shadow">All</span>
               </button>
             </th>
-            <th class="py-3 px-1 text-center w-14" title="Listen to finished 24-bit studio master">Master</th>
-            <!-- Quality Report Header -->
+            <!-- Quality Report Header with Report All button directly below -->
             <th class="py-2 px-3 text-left">
-              <div class="flex items-center justify-between gap-2">
-                <span title="Quality KPIs, Apple Music compliance, and applied DSP filters">Quality Report</span>
-                <button @click="batchProcessQualityReport()" :disabled="!isReadyToProcess() || !tracks.some(t => t.hasMastered)" class="text-[10px] bg-gray-700 hover:bg-emerald-600/60 text-white px-2 py-0.5 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed" title="Generate Quality Report for all mastered tracks">
+              <div class="flex flex-col gap-1 items-start">
+                <span class="text-xs text-gray-300 font-semibold" title="Quality KPIs, Apple Music compliance, and applied DSP filters">Quality Report</span>
+                <button @click="batchProcessQualityReport()" :disabled="!isReadyToProcess() || !tracks.some(t => t.hasMastered)" class="text-[10px] bg-gray-700 hover:bg-emerald-600/60 text-white px-2.5 py-0.5 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed font-semibold" title="Generate Quality Report for all mastered tracks">
                   Report All
                 </button>
               </div>
             </th>
+            <!-- Master Playback Header at the very end -->
+            <th class="py-3 px-1 text-center w-14" title="Listen to finished 24-bit studio master">Master</th>
           </tr>
         </thead>
         <tbody>
@@ -434,20 +432,6 @@
                   </template>
                 </td>
 
-                <!-- Play Mastered Column -->
-                <td class="py-4 px-1 text-center">
-                  <template x-if="track.hasMastered">
-                    <button @click="togglePlay('master', track)" class="w-8 h-8 rounded-full border-2 border-emerald-600 hover:border-emerald-400 hover:bg-emerald-900/30 flex items-center justify-center transition-all mx-auto shadow" title="Play 24-bit Lossless Studio Master">
-                      <template x-if="currentlyPlayingTrack === track.name + 'master' && isPlaying">
-                        <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                      </template>
-                      <template x-if="currentlyPlayingTrack !== track.name + 'master' || !isPlaying">
-                        <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                      </template>
-                    </button>
-                  </template>
-                </td>
-
                 <!-- Quality Report Column -->
                 <td class="py-4 px-3 text-xs border-l border-gray-700/30">
                    <template x-if="track.isProcessing === 'report'">
@@ -493,6 +477,20 @@
                    <template x-if="track.isProcessing !== 'report' && !track.hasMastered">
                       <span class="text-gray-600 italic">Pending Master...</span>
                    </template>
+                </td>
+
+                <!-- Play Mastered Column (at the very end of the row) -->
+                <td class="py-4 px-1 text-center">
+                  <template x-if="track.hasMastered">
+                    <button @click="togglePlay('master', track)" class="w-8 h-8 rounded-full border-2 border-emerald-600 hover:border-emerald-400 hover:bg-emerald-900/30 flex items-center justify-center transition-all mx-auto shadow" title="Play 24-bit Lossless Studio Master">
+                      <template x-if="currentlyPlayingTrack === track.name + 'master' && isPlaying">
+                        <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                      </template>
+                      <template x-if="currentlyPlayingTrack !== track.name + 'master' || !isPlaying">
+                        <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                      </template>
+                    </button>
+                  </template>
                 </td>
               </tr>
 
