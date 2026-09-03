@@ -329,14 +329,18 @@
         </div>
 
         <!-- Global Actions Above Table -->
-        <div class="flex flex-col sm:flex-row items-center gap-2.5">
+        <div class="flex flex-col sm:flex-row items-center gap-2.5 flex-wrap">
+          <button @click="batchDirectMasterAll()" :disabled="!isReadyToProcess()" class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-2 px-3.5 text-xs sm:text-sm rounded-lg shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5" title="Pure Two-Pass Linear Mastering directly from raw audio without AI stem separation (Zero phase cancellation, pristine acoustic clarity)">
+            <svg class="w-4 h-4 text-cyan-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            ✨ Pure Direct Master All (Pristine)
+          </button>
+          <button @click="batchRemixAndMasterAll()" :disabled="!isReadyToProcess()" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 px-3.5 text-xs sm:text-sm rounded-lg shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5" title="Split Stems with AI Demucs, Re-mix, Re-master, and Re-generate Quality Reports">
+            <svg class="w-4 h-4 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            ⚡ Stem Re-Mix & Master All
+          </button>
           <button @click="batchProcessMissing()" :disabled="!isReadyToProcess()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-3 text-xs sm:text-sm rounded-lg shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5" :title="isReadyToProcess() ? 'Process only missing Split, Mix, and Master steps sequentially' : 'Please specify both Input and Output folders before processing'">
             <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
             Process Missing
-          </button>
-          <button @click="batchRemixAndMasterAll()" :disabled="!isReadyToProcess()" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 px-3.5 text-xs sm:text-sm rounded-lg shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5" title="Re-mix, Re-master, and Re-generate Quality Reports for all tracks with the currently selected DSP profiles">
-            <svg class="w-4 h-4 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            ⚡ Re-Mix & Master All
           </button>
           <button @click="runGlobalSequence()" :disabled="!isReadyToProcess() || tracks.some(t => !t.hasMastered)" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2 px-3.5 text-xs sm:text-sm rounded-lg shadow-lg transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5" :title="isReadyToProcess() ? (tracks.some(t => !t.hasMastered) ? 'All tracks must be mastered before sequencing' : 'Sequence album into dramatic arc, tag metadata, and generate playlists') : 'Please specify both Input and Output folders before sequencing'">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
@@ -458,12 +462,18 @@
                   <template x-if="track.isProcessing === 'split'">
                      <svg class="animate-spin h-5 w-5 text-purple-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                   </template>
-                  <template x-if="!track.isProcessing && track.hasSplit">
+                  <template x-if="!track.isProcessing && track.splitSkipped">
+                    <span class="inline-flex items-center gap-1 text-gray-400 text-xs font-bold uppercase tracking-wider bg-gray-800/80 px-2 py-1 rounded border border-gray-700/60 shadow-sm" title="Stem splitting skipped (Direct Master Mode)">
+                      <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+                      Skipped
+                    </span>
+                  </template>
+                  <template x-if="!track.isProcessing && !track.splitSkipped && track.hasSplit">
                     <span class="inline-flex items-center gap-1 text-purple-400 text-xs font-bold uppercase tracking-wider bg-purple-900/30 px-2 py-1 rounded" title="Stems successfully separated">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Done
                     </span>
                   </template>
-                  <template x-if="!track.isProcessing && !track.hasSplit">
+                  <template x-if="!track.isProcessing && !track.splitSkipped && !track.hasSplit">
                     <button @click="runRowAction('split', track)" :disabled="!isReadyToProcess()" class="text-xs bg-gray-700 hover:bg-purple-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed border border-purple-500/30" title="Separate stems with Demucs">Split</button>
                   </template>
                 </td>
@@ -473,7 +483,13 @@
                   <template x-if="track.isProcessing === 'mix'">
                      <svg class="animate-spin h-5 w-5 text-cyan-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                   </template>
-                  <template x-if="!track.isProcessing && track.hasMixed">
+                  <template x-if="!track.isProcessing && track.mixSkipped">
+                    <span class="inline-flex items-center gap-1 text-gray-400 text-xs font-bold uppercase tracking-wider bg-gray-800/80 px-2 py-1 rounded border border-gray-700/60 shadow-sm" title="Stem mixing skipped (Direct Master Mode)">
+                      <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+                      Skipped
+                    </span>
+                  </template>
+                  <template x-if="!track.isProcessing && !track.mixSkipped && track.hasMixed">
                     <div class="flex items-center justify-center gap-1.5">
                       <span class="inline-flex items-center gap-1 text-cyan-400 text-xs font-bold uppercase tracking-wider bg-cyan-900/30 px-2 py-1 rounded" title="Stems mixdown completed">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Done
@@ -483,7 +499,7 @@
                       </button>
                     </div>
                   </template>
-                  <template x-if="!track.isProcessing && !track.hasMixed">
+                  <template x-if="!track.isProcessing && !track.mixSkipped && !track.hasMixed">
                     <button @click="runRowAction('mix', track)" :disabled="!isReadyToProcess() || !track.hasSplit" class="text-xs bg-gray-700 hover:bg-cyan-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed border border-cyan-500/30" title="Mix stems with DSP warm filter chain">Mix</button>
                   </template>
                 </td>
@@ -789,7 +805,7 @@
            this.currentlyPlayingTrack = trackId;
            this.currentlyPlayingTitle = `${track.name} [${type.toUpperCase()}]`;
            
-           const streamUrl = '/api/stream?path=' + encodeURIComponent(path);
+           const streamUrl = '/api/stream?path=' + encodeURIComponent(path) + '&_t=' + Date.now();
            audio.src = streamUrl;
            audio.volume = this.audioVolume;
            audio.load();
@@ -1050,12 +1066,19 @@
               this.showWarningModal = true;
             }
 
-            this.tracks = data.tracks.map(t => ({
-              ...t,
-              preset: this.globalPreset || 'auto',
-              showStats: false,
-              isProcessing: null
-            }));
+            this.tracks = data.tracks.map(t => {
+              const prevTrack = (this.tracks || []).find(p => p.name === t.name);
+              const isDirect = (this.directMasterMode !== undefined ? this.directMasterMode : (prevTrack?.isDirect ?? (t.hasMastered && !t.hasMixed)));
+              return {
+                ...t,
+                preset: prevTrack?.preset || this.globalPreset || 'auto',
+                showStats: false,
+                isProcessing: null,
+                isDirect: isDirect,
+                splitSkipped: isDirect,
+                mixSkipped: isDirect
+              };
+            });
             
             this.log(`Found ${this.tracks.length} tracks. Master destination has ${this.existingOutputCount} files.`, 'success');
           } catch (e) {
@@ -1249,15 +1272,67 @@
           }
         },
 
+        async batchDirectMasterAll() {
+          if (!this.isReadyToProcess()) {
+            this.log('Both Input Folder and Output Folder must be specified before processing.', 'error');
+            return;
+          }
+
+          this.directMasterMode = true;
+          this.log(`✨ Starting Pure Direct 2-Pass Mastering for all ${this.tracks.length} tracks (Pristine Raw Source, Zero AI Stem Artifacts)...`, 'info');
+          for (let i = 0; i < this.tracks.length; i++) {
+             const track = this.tracks[i];
+             track.isDirect = true;
+             track.splitSkipped = true;
+             track.mixSkipped = true;
+
+             // Step 1: Analyze raw audio
+             if (!track.hasAnalyzed) {
+                this.log(`[1/3] Analyzing: ${track.name}...`);
+                await this.runRowAction('analyze', track, false);
+             }
+             // Step 2: Direct 2-Pass Master from raw WAV
+             this.log(`[2/3] Pure Mastering from Raw with profile '${track.preset}': ${track.name}...`);
+             track.isProcessing = 'master';
+             try {
+               const res = await this.executeAction('/api/master', {
+                 targetPath: track.fullPath,
+                 preset: track.preset,
+                 outputFolder: this.outputFolder,
+                 trackName: track.name
+               });
+               if (res) {
+                 track.hasMastered = true;
+                 if (res.processedTracks && res.processedTracks[0]) {
+                   const pt = res.processedTracks[0];
+                   track.masteredFile = pt.outputWav;
+                   track.masterStats = pt;
+                 }
+               }
+             } finally {
+               track.isProcessing = null;
+             }
+             // Step 3: Refresh Quality Report
+             this.log(`[3/3] Generating Quality Report: ${track.name}...`);
+             await this.runRowAction('report', track, false);
+          }
+          await this.scanFolder();
+          this.log('✨ All tracks successfully direct-mastered with pristine audiophile purity!', 'success');
+        },
+
         async batchRemixAndMasterAll() {
           if (!this.isReadyToProcess()) {
             this.log('Both Input Folder and Output Folder must be specified before processing.', 'error');
             return;
           }
 
+          this.directMasterMode = false;
           this.log(`⚡ Starting Full Re-Mix & Master for all ${this.tracks.length} tracks with profile: ${this.globalPreset}...`, 'info');
           for (let i = 0; i < this.tracks.length; i++) {
              const track = this.tracks[i];
+             track.isDirect = false;
+             track.splitSkipped = false;
+             track.mixSkipped = false;
              // Step 1: Ensure Analyze
              if (!track.hasAnalyzed) {
                 this.log(`[Step 1/4] Analyzing: ${track.name}...`);
