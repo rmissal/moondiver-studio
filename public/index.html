@@ -9,40 +9,33 @@
 </head>
 <body class="bg-[#0b1120] text-gray-100 min-h-screen p-8 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] bg-fixed" x-data="studioApp()">
 
-  <div class="max-w-6xl mx-auto relative z-10">
-    <header class="mb-12 flex flex-col md:flex-row items-center justify-between gap-6">
+  <div class="max-w-7xl mx-auto relative z-10">
+    <header class="mb-8 flex flex-col md:flex-row items-center justify-between gap-6">
       <div class="text-center md:text-left">
-        <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 pb-2">
+        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 pb-1">
           Moondiver Mastering
         </h1>
-        <p class="text-gray-400 mt-2 text-lg font-light tracking-wide">Automated Stem Mixing, Mastering & Album Sequencing</p>
+        <p class="text-gray-400 mt-1 text-sm md:text-base font-light tracking-wide">Automated Stem Separation, Analog Warmth Mixing, Two-Pass Linear Mastering & Album Sequencing</p>
       </div>
-
-      <div class="bg-gray-800/80 backdrop-blur border border-gray-700/50 rounded-lg px-5 py-3 flex items-center gap-6 shrink-0 shadow-xl">
-        <!-- CPU Gauge -->
-        <div class="flex items-center gap-3">
-          <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
-          <div class="flex flex-col items-start">
-            <span class="text-[10px] uppercase tracking-wider text-gray-500 font-bold">CPU Load</span>
-            <div class="flex items-center gap-2">
-              <div class="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                <div class="h-full transition-all duration-500" :class="cpu > 80 ? 'bg-red-500' : (cpu > 50 ? 'bg-yellow-500' : 'bg-green-500')" :style="`width: ${cpu}%`"></div>
-              </div>
-              <span class="text-sm font-mono font-bold text-gray-300 w-8" x-text="`${cpu}%`"></span>
+      <!-- Hardware Monitoring -->
+      <div class="flex items-center gap-6 bg-gray-900/80 px-5 py-3 rounded-2xl border border-gray-800 backdrop-blur shadow-lg">
+        <div class="flex items-center gap-3" title="Real-time CPU Utilization">
+          <span class="text-xs text-gray-400 font-bold tracking-wider uppercase">CPU</span>
+          <div class="flex items-center gap-2">
+            <div class="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+              <div class="h-full transition-all duration-500" :class="cpu > 80 ? 'bg-red-500' : (cpu > 50 ? 'bg-yellow-500' : 'bg-cyan-500')" :style="`width: ${cpu}%`"></div>
             </div>
+            <span class="text-xs font-mono font-bold text-gray-300 w-8" x-text="`${cpu}%`"></span>
           </div>
         </div>
-        <!-- GPU Gauge -->
-        <div class="flex items-center gap-3">
-          <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
-          <div class="flex flex-col items-start">
-            <span class="text-[10px] uppercase tracking-wider text-gray-500 font-bold">RTX 5060</span>
-            <div class="flex items-center gap-2">
-              <div class="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                <div class="h-full transition-all duration-500" :class="gpu > 80 ? 'bg-red-500' : (gpu > 50 ? 'bg-yellow-500' : 'bg-cyan-500')" :style="`width: ${gpu}%`"></div>
-              </div>
-              <span class="text-sm font-mono font-bold text-gray-300 w-8" x-text="`${gpu}%`"></span>
+        <div class="h-6 w-[1px] bg-gray-700"></div>
+        <div class="flex items-center gap-3" title="Real-time GPU Utilization (NVIDIA RTX)">
+          <span class="text-xs text-purple-400 font-bold tracking-wider uppercase">GPU</span>
+          <div class="flex items-center gap-2">
+            <div class="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+              <div class="h-full transition-all duration-500" :class="gpu > 80 ? 'bg-red-500' : (gpu > 50 ? 'bg-yellow-500' : 'bg-purple-500')" :style="`width: ${gpu}%`"></div>
             </div>
+            <span class="text-xs font-mono font-bold text-gray-300 w-8" x-text="`${gpu}%`"></span>
           </div>
         </div>
       </div>
@@ -51,42 +44,85 @@
     <!-- Global Configuration Bar -->
     <div class="bg-gray-800/60 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-700/50 mb-8">
       <div class="flex flex-col md:flex-row items-end gap-4">
+        <!-- Quick Album Selector -->
+        <div class="w-full md:w-56">
+          <label class="block text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wider" title="Instantly switch between album folders in E:\Music Projects">
+            Quick Select Album
+          </label>
+          <select x-model="selectedAlbum" @change="onAlbumSelected()" class="w-full bg-[#111827] border border-gray-600 rounded-lg py-3 px-3 text-cyan-300 text-sm focus:outline-none focus:border-cyan-500 transition shadow" title="Choose a music project directory">
+            <option value="">-- Choose Project --</option>
+            <template x-for="alb in albumList" :key="alb.name">
+              <option :value="alb.path" x-text="alb.name"></option>
+            </template>
+          </select>
+        </div>
+
+        <!-- Folder Path Input -->
         <div class="flex-1 w-full">
-          <label class="block text-sm font-medium text-gray-300 mb-2">Absolute Album Folder Path (e.g. suno_exports)</label>
+          <label class="block text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wider" title="Filesystem path to the album's suno_exports directory">
+            Album suno_exports Path
+          </label>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
               </svg>
             </div>
-            <input type="text" x-model="targetPath" class="w-full bg-[#111827] border border-gray-600 rounded-lg py-3 pl-10 pr-3 text-cyan-300 font-mono text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-shadow" placeholder="E:\Music Projects\Frozen Time\suno_exports" @keydown.enter="scanFolder()">
+            <input type="text" x-model="targetPath" class="w-full bg-[#111827] border border-gray-600 rounded-lg py-3 pl-10 pr-3 text-cyan-300 font-mono text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-shadow" placeholder="E:\Music Projects\Frozen Time\suno_exports" @keydown.enter="scanFolder()" title="Enter folder path and press Enter to scan">
           </div>
         </div>
-        <button @click="browseFolder()" :disabled="loading" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg shadow-md disabled:opacity-50 whitespace-nowrap flex items-center gap-2" title="Browse for folder">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
-            Browse
-          </button>
-        <button @click="scanFolder()" :disabled="loading" class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg disabled:opacity-50 whitespace-nowrap flex items-center gap-2">
+
+        <!-- Browse Button -->
+        <button @click="browseFolder()" :disabled="loading" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg shadow-md disabled:opacity-50 whitespace-nowrap flex items-center gap-2 transition" title="Open native Windows Explorer dialog to select folder">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+          Browse
+        </button>
+
+        <!-- Scan Folder Button -->
+        <button @click="scanFolder()" :disabled="loading" class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg disabled:opacity-50 whitespace-nowrap flex items-center gap-2 transition" title="Scan directory for tracks, stems, and mastering status">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
           Scan Folder
         </button>
+      </div>
+
+      <!-- Version Control Bar -->
+      <div class="mt-4 pt-4 border-t border-gray-700/40 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-gray-400 font-semibold uppercase tracking-wider">Master Version:</span>
+          <select x-model="currentVersion" @change="scanFolder()" class="bg-[#111827] border border-emerald-500/60 rounded px-2.5 py-1.5 text-emerald-300 font-mono text-xs focus:outline-none" title="Select which master version folder to view and write to">
+            <template x-for="ver in availableVersions" :key="ver">
+              <option :value="ver" x-text="ver"></option>
+            </template>
+          </select>
+          <button @click="createNewVersion()" :disabled="loading" class="bg-gray-700 hover:bg-emerald-700 text-gray-200 hover:text-white px-2.5 py-1.5 rounded text-xs transition flex items-center gap-1 border border-gray-600" title="Create a new version folder (e.g. mastered_versions_v1) to preserve previous masters">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            + New Version Folder
+          </button>
+        </div>
+        <div class="text-gray-400 font-mono" x-show="albumRoot">
+          Album: <span class="text-emerald-400 font-bold" x-text="albumRoot"></span> / <span class="text-white font-bold" x-text="currentVersion"></span>
+        </div>
       </div>
     </div>
 
     <!-- Batch Processing Table -->
     <div x-show="tracks.length > 0" class="bg-gray-800/60 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-700/50 mb-8 overflow-x-auto" style="display: none;">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-700/50 pb-4 gap-4">
-        <h2 class="text-xl font-semibold text-white flex items-center gap-2">
-          <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-          Album Tracks
-        </h2>
-        <!-- Global Actions Moved Above Table -->
+        <div class="flex items-center gap-3">
+          <h2 class="text-xl font-semibold text-white flex items-center gap-2">
+            <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+            Album Tracks
+          </h2>
+          <span class="text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded-full font-mono" x-text="`${tracks.length} tracks`"></span>
+        </div>
+
+        <!-- Global Actions Above Table -->
         <div class="flex flex-col sm:flex-row items-center gap-3">
-          <button @click="batchProcessMissing()" :disabled="loading" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 text-sm rounded-lg shadow-md transition disabled:opacity-50 flex items-center gap-2">
+          <button @click="batchProcessMissing()" :disabled="loading" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 text-sm rounded-lg shadow-md transition disabled:opacity-50 flex items-center gap-2" title="Process all missing Split, Mix, and Master steps sequentially">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
             Batch Process Missing Steps
           </button>
-          <button @click="runGlobalSequence()" :disabled="loading || tracks.some(t => !t.hasMastered)" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2 px-4 text-sm rounded-lg shadow-lg transition disabled:opacity-30 flex items-center gap-2">
+          <button @click="runGlobalSequence()" :disabled="loading || tracks.some(t => !t.hasMastered)" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2 px-4 text-sm rounded-lg shadow-lg transition disabled:opacity-30 flex items-center gap-2" title="Sequence album into harmonic tension arc, tag studio metadata, and generate playlists">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
             4. Sequence Album
           </button>
@@ -98,44 +134,45 @@
           <tr>
             <th colspan="3" class="border-b border-gray-700/80"></th>
             <th colspan="3" class="px-2 pb-2 pt-2 border-b border-gray-700/80">
-              <div class="h-1.5 w-full bg-gradient-to-r from-purple-500 via-cyan-500 to-emerald-500 rounded-full opacity-80"></div>
+              <div class="h-1.5 w-full bg-gradient-to-r from-purple-500 via-cyan-500 to-emerald-500 rounded-full opacity-80" title="Audio Processing Pipeline: Split -> Mix -> Master"></div>
             </th>
             <th colspan="2" class="border-b border-gray-700/80"></th>
           </tr>
           <tr class="text-gray-400 text-sm border-b border-gray-700/80">
-            <th class="py-3 px-2">Track Name</th>
-            <th class="py-3 px-1 text-center w-10" title="Play Original">Raw ▶</th>
-            <th class="py-3 px-2">DSP Profile</th>
+            <th class="py-3 px-2" title="Audio track filename">Track Name</th>
+            <th class="py-3 px-1 text-center w-12" title="Listen to original raw Suno export">Raw</th>
+            <th class="py-3 px-2" title="Target Acoustic Genre Profile">DSP Profile</th>
             <th class="py-3 px-2 text-center bg-purple-900/10">
-              <button @click="batchProcessColumn('split')" :disabled="loading" class="w-full flex flex-col items-center gap-1 hover:text-purple-400 transition-colors group">
+              <button @click="batchProcessColumn('split')" :disabled="loading" class="w-full flex flex-col items-center gap-1 hover:text-purple-400 transition-colors group" title="Step 1: Separate vocals, bass, drums, other stems using Demucs AI">
                 <span class="text-purple-300">1. Split</span>
                 <span class="text-[10px] bg-gray-700 group-hover:bg-purple-600/50 text-white px-2 py-0.5 rounded shadow">All</span>
               </button>
             </th>
             <th class="py-3 px-2 text-center bg-cyan-900/10">
-              <button @click="batchProcessColumn('mix')" :disabled="loading" class="w-full flex flex-col items-center gap-1 hover:text-cyan-400 transition-colors group">
+              <button @click="batchProcessColumn('mix')" :disabled="loading" class="w-full flex flex-col items-center gap-1 hover:text-cyan-400 transition-colors group" title="Step 2: Auto-mix stems with analog warmth and de-mudding">
                 <span class="text-cyan-300">2. Mix</span>
                 <span class="text-[10px] bg-gray-700 group-hover:bg-cyan-600/50 text-white px-2 py-0.5 rounded shadow">All</span>
               </button>
             </th>
             <th class="py-3 px-2 text-center bg-emerald-900/10">
-              <button @click="batchProcessColumn('master')" :disabled="loading" class="w-full flex flex-col items-center gap-1 hover:text-emerald-400 transition-colors group">
+              <button @click="batchProcessColumn('master')" :disabled="loading" class="w-full flex flex-col items-center gap-1 hover:text-emerald-400 transition-colors group" title="Step 3: Two-Pass Linear Mastering (EBU R128 -16 LUFS)">
                 <span class="text-emerald-300">3. Master</span>
                 <span class="text-[10px] bg-gray-700 group-hover:bg-emerald-600/50 text-white px-2 py-0.5 rounded shadow">All</span>
               </button>
             </th>
-            <th class="py-3 px-1 text-center w-10" title="Play Mastered">▶ Master</th>
-            <th class="py-3 px-3 text-left">Quality Report</th>
+            <th class="py-3 px-1 text-center w-14" title="Listen to finished 24-bit studio master">Master</th>
+            <th class="py-3 px-3 text-left" title="Quality KPIs, Apple Music compliance, and applied DSP filters">Quality Report</th>
           </tr>
         </thead>
         <tbody>
           <template x-for="(track, index) in tracks" :key="track.name">
               <tr class="border-b border-gray-700/30 hover:bg-gray-700/20 transition-colors" :class="track.isProcessing ? 'bg-gray-700/40 animate-pulse' : ''">
                 <!-- Track Name -->
-                <td class="py-4 px-2 font-medium text-gray-200" x-text="track.name"></td>
+                <td class="py-4 px-2 font-medium text-gray-200" x-text="track.name" :title="track.fileName"></td>
+
                 <!-- Play Raw Column -->
                 <td class="py-4 px-1 text-center">
-                  <button @click="togglePlay('raw', track)" class="w-8 h-8 rounded-full border-2 border-gray-600 hover:border-cyan-400 hover:bg-cyan-900/30 flex items-center justify-center transition-all mx-auto" title="Play Original">
+                  <button @click="togglePlay('raw', track)" class="w-8 h-8 rounded-full border-2 border-gray-600 hover:border-cyan-400 hover:bg-cyan-900/30 flex items-center justify-center transition-all mx-auto shadow" title="Play original unmastered export">
                     <template x-if="currentlyPlayingTrack === track.name + 'raw' && isPlaying">
                       <svg class="w-4 h-4 text-cyan-400" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                     </template>
@@ -144,110 +181,117 @@
                     </template>
                   </button>
                 </td>
-                <!-- DSP Profile -->
+
+                <!-- DSP Profile Selector -->
                 <td class="py-4 px-2">
-                  <select x-model="track.preset" :disabled="track.isProcessing" class="bg-[#111827] border border-gray-600 rounded p-1.5 text-sm text-gray-300 focus:outline-none focus:border-cyan-500 w-full max-w-[150px]">
+                  <select x-model="track.preset" :disabled="track.isProcessing" class="bg-[#111827] border border-gray-600 rounded p-1.5 text-sm text-gray-300 focus:outline-none focus:border-cyan-500 w-full max-w-[150px]" title="Choose genre profile for calibrated EQ curves and stereowidth">
                     <template x-for="[key, p] in Object.entries(presets)" :key="key">
                       <option :value="key" x-text="p.name" :selected="key === track.preset"></option>
                     </template>
                   </select>
                 </td>
+
                 <!-- Step 1: Split -->
                 <td class="py-4 px-2 text-center bg-purple-900/5">
                   <template x-if="track.isProcessing === 'split'">
                      <svg class="animate-spin h-5 w-5 text-purple-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                   </template>
                   <template x-if="!track.isProcessing && track.hasSplit">
-                    <span class="inline-flex items-center gap-1 text-purple-400 text-xs font-bold uppercase tracking-wider bg-purple-900/30 px-2 py-1 rounded">
+                    <span class="inline-flex items-center gap-1 text-purple-400 text-xs font-bold uppercase tracking-wider bg-purple-900/30 px-2 py-1 rounded" title="Stems successfully separated">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Done
                     </span>
                   </template>
                   <template x-if="!track.isProcessing && !track.hasSplit">
-                    <button @click="runRowAction('split', track)" :disabled="loading" class="text-xs bg-gray-700 hover:bg-purple-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-50 border border-purple-500/30">Split</button>
+                    <button @click="runRowAction('split', track)" :disabled="loading" class="text-xs bg-gray-700 hover:bg-purple-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-50 border border-purple-500/30" title="Separate stems with Demucs">Split</button>
                   </template>
                 </td>
+
                 <!-- Step 2: Mix -->
                 <td class="py-4 px-2 text-center bg-cyan-900/5">
                   <template x-if="track.isProcessing === 'mix'">
                      <svg class="animate-spin h-5 w-5 text-cyan-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                   </template>
                   <template x-if="!track.isProcessing && track.hasMixed">
-                    <span class="inline-flex items-center gap-1 text-cyan-400 text-xs font-bold uppercase tracking-wider bg-cyan-900/30 px-2 py-1 rounded">
+                    <span class="inline-flex items-center gap-1 text-cyan-400 text-xs font-bold uppercase tracking-wider bg-cyan-900/30 px-2 py-1 rounded" title="Stems mixdown completed">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Done
                     </span>
                   </template>
                   <template x-if="!track.isProcessing && !track.hasMixed">
-                    <button @click="runRowAction('mix', track)" :disabled="loading || !track.hasSplit" class="text-xs bg-gray-700 hover:bg-cyan-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-50 border border-cyan-500/30">Mix</button>
+                    <button @click="runRowAction('mix', track)" :disabled="loading || !track.hasSplit" class="text-xs bg-gray-700 hover:bg-cyan-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-50 border border-cyan-500/30" title="Mix stems with DSP warm filter chain">Mix</button>
                   </template>
                 </td>
+
                 <!-- Step 3: Master -->
                 <td class="py-4 px-2 text-center bg-emerald-900/5">
                   <template x-if="track.isProcessing === 'master'">
                      <svg class="animate-spin h-5 w-5 text-emerald-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                   </template>
                   <template x-if="!track.isProcessing && track.hasMastered">
-                    <div class="flex items-center justify-center gap-2">
-                      <span class="inline-flex items-center gap-1 text-emerald-400 text-xs font-bold uppercase tracking-wider bg-emerald-900/30 px-2 py-1 rounded">
+                    <div class="flex items-center justify-center gap-1.5">
+                      <span class="inline-flex items-center gap-1 text-emerald-400 text-xs font-bold uppercase tracking-wider bg-emerald-900/30 px-2 py-1 rounded" title="Final 24-bit Studio Master complete">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Done
                       </span>
                       <template x-if="track.masterStats">
-                         <button @click="track.showStats = !track.showStats" class="text-emerald-500 hover:text-emerald-300 focus:outline-none transition-colors" title="View Master Report">
+                         <button @click="track.showStats = !track.showStats" class="text-emerald-400 hover:text-emerald-200 focus:outline-none transition-colors" title="Toggle detailed Before/After KPI inspection">
                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                          </button>
                       </template>
                     </div>
                   </template>
                   <template x-if="!track.isProcessing && !track.hasMastered">
-                    <button @click="runRowAction('master', track)" :disabled="loading || (!track.hasMixed && !track.hasSplit)" class="text-xs bg-gray-700 hover:bg-emerald-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-50 border border-emerald-500/30">Master</button>
+                    <button @click="runRowAction('master', track)" :disabled="loading || (!track.hasMixed && !track.hasSplit)" class="text-xs bg-gray-700 hover:bg-emerald-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-50 border border-emerald-500/30" title="Execute Two-Pass Linear Mastering">Master</button>
                   </template>
                 </td>
+
                 <!-- Play Mastered Column -->
                 <td class="py-4 px-1 text-center">
                   <template x-if="track.hasMastered">
-                    <button @click="togglePlay('master', track)" class="w-8 h-8 rounded-full border-2 border-emerald-700 hover:border-emerald-400 hover:bg-emerald-900/30 flex items-center justify-center transition-all mx-auto" title="Play Mastered">
+                    <button @click="togglePlay('master', track)" class="w-8 h-8 rounded-full border-2 border-emerald-600 hover:border-emerald-400 hover:bg-emerald-900/30 flex items-center justify-center transition-all mx-auto shadow" title="Play 24-bit Lossless Studio Master">
                       <template x-if="currentlyPlayingTrack === track.name + 'master' && isPlaying">
                         <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                       </template>
                       <template x-if="currentlyPlayingTrack !== track.name + 'master' || !isPlaying">
-                        <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                       </template>
                     </button>
                   </template>
                 </td>
+
                 <!-- Quality Report Column -->
                 <td class="py-4 px-3 text-xs border-l border-gray-700/30">
                    <template x-if="track.masterStats">
                       <div class="flex flex-col gap-1 w-max">
-                         <div class="flex items-center gap-2">
+                         <div class="flex items-center gap-2" title="Selected or Auto-detected Genre Profile">
                             <span class="text-gray-500 w-16">Profile:</span>
                             <span class="text-amber-300 font-semibold" x-text="track.masterStats.autoDetectedGenre?.genreName || track.masterStats.autoDetectedGenre?.name || '—'"></span>
                          </div>
-                         <div class="flex items-center gap-2">
+                         <div class="flex items-center gap-2" title="Apple Music Digital Masters Compliance Score">
                             <span class="text-gray-500 w-16">Store:</span>
                             <span class="font-bold flex items-center gap-1" :class="track.masterStats.kpi_vergleich.appleMusicConfidence === 'High' ? 'text-emerald-400' : 'text-yellow-400'">
                               <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                               <span x-text="track.masterStats.kpi_vergleich.appleMusicConfidence"></span>
                             </span>
                          </div>
-                         <div class="flex items-center gap-2">
+                         <div class="flex items-center gap-2" title="Integrated Loudness Target">
                             <span class="text-gray-500 w-16">LUFS:</span>
                             <span class="text-gray-200 font-mono" x-text="track.masterStats.kpi_vergleich.lufs.after_target + ' LUFS'"></span>
                          </div>
-                         <div class="flex items-center gap-2">
+                         <div class="flex items-center gap-2" title="True Peak Headroom Target">
                             <span class="text-gray-500 w-16">Peak:</span>
                             <span class="text-gray-200 font-mono" x-text="track.masterStats.kpi_vergleich.truePeak.after_target + ' dBTP'"></span>
                          </div>
                       </div>
                    </template>
                    <template x-if="!track.masterStats && track.hasMastered">
-                      <span class="text-gray-500 italic">No report.</span>
+                      <span class="text-gray-500 italic">Master exists</span>
                    </template>
                    <template x-if="!track.hasMastered">
                       <span class="text-gray-600 italic">Pending...</span>
                    </template>
                 </td>
               </tr>
-              <!-- Stats Row -->
+
+              <!-- Expanded Stats Row -->
               <template x-if="track.showStats && track.masterStats">
                  <tr class="bg-gray-900/40 border-b border-gray-700/30">
                     <td colspan="8" class="py-4 px-6 text-sm text-gray-300">
@@ -311,6 +355,11 @@
     function studioApp() {
       return {
         targetPath: 'E:\\Music Projects\\Frozen Time\\suno_exports',
+        albumList: [],
+        selectedAlbum: '',
+        albumRoot: '',
+        availableVersions: ['mastered_versions'],
+        currentVersion: 'mastered_versions',
         presets: {},
         tracks: [],
         loading: false,
@@ -352,12 +401,18 @@
           try {
             const res = await fetch('/api/presets');
             this.presets = await res.json();
-            // Optional: initial scan if path exists
-            this.scanFolder();
           } catch(e) {
             this.log('Error loading presets', 'error');
           }
+
+          try {
+            const res = await fetch('/api/albums');
+            const data = await res.json();
+            this.albumList = data.albums || [];
+          } catch(e) {}
           
+          await this.scanFolder();
+
           setInterval(async () => {
             try {
               const res = await fetch('/api/system-stats');
@@ -366,6 +421,14 @@
               this.gpu = data.gpu;
             } catch(e) {}
           }, 1500);
+        },
+
+        onAlbumSelected() {
+          if (this.selectedAlbum) {
+            this.targetPath = this.selectedAlbum;
+            this.currentVersion = 'mastered_versions';
+            this.scanFolder();
+          }
         },
 
         log(msg, type='info') {
@@ -377,7 +440,7 @@
           this.consoleLogs.push({type, msg: `<span class="text-gray-500">[${timestamp}]</span> ${formatted}`});
           setTimeout(() => {
             const container = document.querySelector('.overflow-y-auto');
-            container.scrollTop = container.scrollHeight;
+            if (container) container.scrollTop = container.scrollHeight;
           }, 50);
         },
 
@@ -394,20 +457,45 @@
           }
         },
 
-        async scanFolder() {
+        async createNewVersion() {
           if (!this.targetPath) return;
           this.loading = true;
-          this.log(`Scanning folder: ${this.targetPath}`);
           try {
-            const res = await fetch('/api/scan-folder', {
+            const res = await fetch('/api/create-version', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ folderPath: this.targetPath })
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
+            this.availableVersions = data.availableVersions;
+            this.currentVersion = data.newVersion;
+            this.log(`Created new master version folder: ${data.newVersion}`, 'success');
+            await this.scanFolder();
+          } catch(e) {
+            this.log(`Error creating version folder: ${e.message}`, 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async scanFolder() {
+          if (!this.targetPath) return;
+          this.loading = true;
+          this.log(`Scanning folder: ${this.targetPath} (Version: ${this.currentVersion})`);
+          try {
+            const res = await fetch('/api/scan-folder', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ folderPath: this.targetPath, targetVersion: this.currentVersion })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
             
-            // Map the API results to include a preset selector (defaulting to 'auto')
+            this.albumRoot = data.albumRoot;
+            this.availableVersions = data.availableVersions || ['mastered_versions'];
+            this.currentVersion = data.currentVersion || 'mastered_versions';
+
             this.tracks = data.tracks.map(t => ({
               ...t,
               preset: 'auto',
@@ -415,7 +503,7 @@
               isProcessing: null
             }));
             
-            this.log(`Found ${this.tracks.length} tracks.`, 'success');
+            this.log(`Found ${this.tracks.length} tracks in ${data.currentVersion}.`, 'success');
           } catch (e) {
             this.log(`Error scanning folder: ${e.message}`, 'error');
           } finally {
@@ -451,27 +539,21 @@
           if (action === 'split') {
             success = await this.executeAction('/api/split', { targetFile: track.fullPath });
           } else if (action === 'mix') {
-             // Pass the original file path; backend automatically resolves it to htdemucs_ft
             success = await this.executeAction('/api/mix', { targetFolder: track.fullPath, preset: track.preset });
           } else if (action === 'master') {
-            // Master the mixed file if it exists, else the original
             const masterTarget = track.mixedFile ? track.mixedFile : track.fullPath;
+            const albumMasterFolder = this.albumRoot + '\\' + this.currentVersion;
             
-            // Fix: Put mastered files in the ALBUM root 'mastered_versions', not inside suno_exports
-            // Go one folder up from suno_exports
-            let albumRoot = this.targetPath;
-            if (albumRoot.endsWith('\\') || albumRoot.endsWith('/')) {
-              albumRoot = albumRoot.slice(0, -1);
-            }
-            albumRoot = albumRoot.substring(0, Math.max(albumRoot.lastIndexOf('\\'), albumRoot.lastIndexOf('/')));
-            const albumMasterFolder = albumRoot + '\\mastered_versions';
-            
-            success = await this.executeAction('/api/master', { targetPath: masterTarget, preset: track.preset, outputFolder: albumMasterFolder });
+            success = await this.executeAction('/api/master', {
+              targetPath: masterTarget,
+              preset: track.preset,
+              outputFolder: albumMasterFolder,
+              trackName: track.name
+            });
           }
           track.isProcessing = null;
           
           if (success) {
-            // Refresh the table states
             await this.scanFolder();
           }
         },
@@ -495,8 +577,7 @@
         },
 
         async batchProcessMissing() {
-          this.log('Starting Batch Processing for all tracks...', 'info');
-          // For simplicity, execute sequentially
+          this.log(`Starting Batch Processing for all tracks into ${this.currentVersion}...`, 'info');
           for (let i = 0; i < this.tracks.length; i++) {
              const track = this.tracks[i];
              if (!track.hasSplit) {
@@ -508,7 +589,7 @@
                 await this.runRowAction('mix', track);
              }
              if (!track.hasMastered) {
-                this.log(`[Batch] Mastering ${track.name}...`);
+                this.log(`[Batch] Mastering ${track.name} into ${this.currentVersion}...`);
                 await this.runRowAction('master', track);
              }
           }
@@ -516,18 +597,13 @@
         },
 
         async runGlobalSequence() {
-          if (!this.targetPath) return;
-          this.log('Starting Final Album Sequence...');
-          
-          let albumRoot = this.targetPath;
-          if (albumRoot.endsWith('\\') || albumRoot.endsWith('/')) {
-            albumRoot = albumRoot.slice(0, -1);
-          }
-          if (albumRoot.toLowerCase().endsWith('suno_exports')) {
-            albumRoot = albumRoot.substring(0, Math.max(albumRoot.lastIndexOf('\\'), albumRoot.lastIndexOf('/')));
-          }
-          
-          await this.executeAction('/api/sequence', { targetPath: albumRoot, applyRenumbering: true });
+          if (!this.targetPath || !this.albumRoot) return;
+          this.log(`Starting Final Album Sequence for ${this.currentVersion}...`);
+          await this.executeAction('/api/sequence', {
+            targetPath: this.albumRoot,
+            applyRenumbering: true,
+            versionFolder: this.currentVersion
+          });
         }
       }
     }
