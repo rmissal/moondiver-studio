@@ -495,13 +495,33 @@ app.post('/api/analyze', async (req, res) => {
 // API: Generate / Update Quality Report (for new and existing masters)
 app.post('/api/quality-report', async (req, res) => {
   try {
-    const { masteredFile, rawFile, outputFolder } = req.body;
-    if (!masteredFile || !fs.existsSync(masteredFile)) {
-      return res.status(400).json({ error: 'Valid masteredFile is required' });
+    let { masteredFile, rawFile, outputFolder } = req.body;
+    let resolvedMasteredFile = masteredFile ? path.resolve(masteredFile) : null;
+    if ((!resolvedMasteredFile || !fs.existsSync(resolvedMasteredFile)) && outputFolder) {
+      const base = path.basename(masteredFile || '');
+      const candidates = [
+        path.join(outputFolder, 'wav', base),
+        path.join(outputFolder, 'wav', `${base.replace(/^\d+[\s_-]*/, '').replace(/\.wav$/i, '')}.wav`),
+        path.join(outputFolder, base),
+        path.join(outputFolder, `${base.replace(/^\d+[\s_-]*/, '').replace(/\.wav$/i, '')}.wav`)
+      ];
+      const found = candidates.find(c => fs.existsSync(c));
+      if (found) {
+        resolvedMasteredFile = found;
+      } else if (fs.existsSync(path.join(outputFolder, 'wav'))) {
+        const wavs = fs.readdirSync(path.join(outputFolder, 'wav'));
+        const cleanTarget = base.replace(/^\d+[\s_-]*/, '').replace(/\.wav$/i, '').toLowerCase();
+        const m = wavs.find(w => w.toLowerCase().includes(cleanTarget));
+        if (m) resolvedMasteredFile = path.join(outputFolder, 'wav', m);
+      }
+    }
+
+    if (!resolvedMasteredFile || !fs.existsSync(resolvedMasteredFile)) {
+      return res.status(400).json({ error: `Valid masteredFile is required (could not find '${masteredFile}')` });
     }
 
     // 1. Analyze mastered file
-    const masterMetrics = await analyzeFile(masteredFile);
+    const masterMetrics = await analyzeFile(resolvedMasteredFile);
 
     // 2. Analyze raw file if provided, or load cached
     let rawMetrics = null;
@@ -521,9 +541,30 @@ app.post('/api/quality-report', async (req, res) => {
 
     const report = {
       status: 'success',
-      track: path.basename(masteredFile, path.extname(masteredFile)),
-      masterFile: masteredFile,
+      track: path.basename(resolvedMasteredFile, path.extname(resolvedMasteredFile)),
+      masterFile: resolvedMasteredFile,
       autoDetectedGenre: masterMetrics.autoDetectedGenre || rawMetrics?.autoDetectedGenre,
+      kpiComparison: {
+        lufs: {
+          beforeMeasured: rawMetrics ? `${rawMetrics.integratedLoudnessLufs} LUFS` : 'N/A',
+          afterTarget: `${masterMetrics.integratedLoudnessLufs} LUFS`,
+          before_measured: rawMetrics ? `${rawMetrics.integratedLoudnessLufs} LUFS` : 'N/A',
+          after_target: `${masterMetrics.integratedLoudnessLufs} LUFS`
+        },
+        truePeak: {
+          beforeMeasured: rawMetrics ? `${rawMetrics.truePeakDbtp} dBTP` : 'N/A',
+          afterTarget: `${masterMetrics.truePeakDbtp} dBTP`,
+          before_measured: rawMetrics ? `${rawMetrics.truePeakDbtp} dBTP` : 'N/A',
+          after_target: `${masterMetrics.truePeakDbtp} dBTP`
+        },
+        loudnessRange: {
+          beforeMeasured: rawMetrics ? `${rawMetrics.loudnessRangeLra} LU` : 'N/A',
+          afterTarget: `${masterMetrics.loudnessRangeLra} LU`,
+          before_measured: rawMetrics ? `${rawMetrics.loudnessRangeLra} LU` : 'N/A',
+          after_target: `${masterMetrics.loudnessRangeLra} LU`
+        },
+        appleMusicConfidence: appleRating
+      },
       kpi_vergleich: {
         lufs: {
           before_measured: rawMetrics ? `${rawMetrics.integratedLoudnessLufs} LUFS` : 'N/A',
@@ -545,25 +586,26 @@ app.post('/api/quality-report', async (req, res) => {
         `Loudness Range: ${masterMetrics.loudnessRangeLra} LU (Dynamic transparency preserved)`,
         `Apple Digital Masters Ready: ${appleRating} confidence rating`
       ],
+      appleMusicConfidence: masterMetrics.appleMusicConfidence,
       stats: {
         sampleRate: masterMetrics.sampleRate,
         channels: masterMetrics.channels,
         codec: masterMetrics.codec,
         duration: masterMetrics.durationSeconds ? `${masterMetrics.durationSeconds}s` : 'N/A',
-        fileSizeBytes: fs.statSync(masteredFile).size
+        fileSizeBytes: fs.statSync(resolvedMasteredFile).size
       },
       analyzedAt: new Date().toISOString()
     };
 
     // 4. Save JSON alongside mastered file (.json)
-    const jsonPath = masteredFile.replace(/\.wav$/i, '.json');
+    const jsonPath = resolvedMasteredFile.replace(/\.wav$/i, '.json');
     fs.writeFileSync(jsonPath, JSON.stringify(report, null, 2), 'utf8');
 
     // Also write into outputFolder/reports/ if outputFolder is provided
     if (outputFolder && fs.existsSync(outputFolder)) {
       const reportsDir = path.join(outputFolder, 'reports');
       fs.mkdirSync(reportsDir, { recursive: true });
-      const reportName = path.basename(masteredFile, path.extname(masteredFile)) + '.json';
+      const reportName = path.basename(resolvedMasteredFile, path.extname(resolvedMasteredFile)) + '.json';
       fs.writeFileSync(path.join(reportsDir, reportName), JSON.stringify(report, null, 2), 'utf8');
     }
 
