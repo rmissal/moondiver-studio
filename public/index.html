@@ -560,6 +560,23 @@
       </template>
     </div>
 
+    <!-- Floating Now Playing Bar -->
+    <div x-show="isPlaying" class="fixed bottom-6 right-6 z-50 bg-gray-900/95 border border-cyan-500/80 rounded-2xl px-4 py-3 shadow-2xl backdrop-blur-md flex items-center gap-3" style="display: none;">
+      <div class="flex items-center gap-1 text-cyan-400">
+        <span class="w-1 h-3 bg-cyan-400 animate-pulse rounded-full"></span>
+        <span class="w-1 h-5 bg-cyan-400 animate-pulse delay-75 rounded-full"></span>
+        <span class="w-1 h-3 bg-cyan-400 animate-pulse delay-150 rounded-full"></span>
+      </div>
+      <div class="flex flex-col">
+        <span class="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Audio Playback</span>
+        <span class="text-xs font-bold text-white max-w-[220px] truncate" x-text="currentlyPlayingTitle"></span>
+      </div>
+      <button @click="stopAudio()" class="bg-red-500/20 hover:bg-red-500/40 text-red-400 border border-red-500/40 font-bold px-2.5 py-1 rounded-lg text-xs transition flex items-center gap-1 shadow ml-2" title="Stop audio playback">
+        <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+        Stop
+      </button>
+    </div>
+
   </div>
 
   <script>
@@ -598,7 +615,22 @@
         consoleLogs: [{type: 'system', msg: '> Moondiver DSP Engine ready.'}],
         playingAudio: null,
         currentlyPlayingTrack: null,
+        currentlyPlayingTitle: '',
         isPlaying: false,
+
+        stopAudio() {
+          if (this.playingAudio) {
+            try {
+              this.playingAudio.pause();
+              this.playingAudio.currentTime = 0;
+              this.playingAudio.src = '';
+            } catch(e) {}
+            this.playingAudio = null;
+          }
+          this.isPlaying = false;
+          this.currentlyPlayingTrack = null;
+          this.currentlyPlayingTitle = '';
+        },
 
         isReadyToProcess() {
           return !this.loading && 
@@ -616,24 +648,29 @@
                  this.playingAudio.play();
                  this.isPlaying = true;
               } else {
-                 this.playingAudio.pause();
-                 this.isPlaying = false;
+                 this.stopAudio();
               }
               return;
            }
            
-           if (this.playingAudio) {
-              this.playingAudio.pause();
-           }
+           this.stopAudio();
            
            this.playingAudio = new Audio('/api/stream?path=' + encodeURIComponent(path));
-           this.playingAudio.onended = () => { this.isPlaying = false; };
-           this.playingAudio.play();
+           this.playingAudio.onended = () => { this.stopAudio(); };
+           this.playingAudio.onerror = () => { this.stopAudio(); };
+           this.playingAudio.play().catch(e => {
+              this.log('Audio playback error: ' + e.message, 'error');
+              this.stopAudio();
+           });
            this.currentlyPlayingTrack = trackId;
+           this.currentlyPlayingTitle = `${track.name} [${type.toUpperCase()}]`;
            this.isPlaying = true;
         },
 
         async init() {
+          window.addEventListener('beforeunload', () => { this.stopAudio(); });
+          window.addEventListener('pagehide', () => { this.stopAudio(); });
+          window.addEventListener('unload', () => { this.stopAudio(); });
           try {
             const res = await fetch('/api/presets');
             this.presets = await res.json();
@@ -660,6 +697,7 @@
         },
 
         onAlbumSelected() {
+          this.stopAudio();
           if (this.selectedAlbum) {
             this.targetPath = this.selectedAlbum;
             // Derivate default output folder
@@ -675,6 +713,7 @@
         },
 
         onVersionSelected() {
+          this.stopAudio();
           if (this.albumRoot) {
             this.outputFolder = this.albumRoot + '\\' + this.currentVersion;
           }
@@ -682,6 +721,7 @@
         },
 
         async onOutputFolderManualChange() {
+          this.stopAudio();
           if (this.outputFolder) {
             await this.checkOutputFolder(this.outputFolder);
             await this.scanFolder();
@@ -753,6 +793,7 @@
         },
 
         async selectFolderFromModal() {
+          this.stopAudio();
           if (!this.modalCurrentPath) return;
           if (this.browseTargetType === 'input') {
             let finalPath = this.modalCurrentPath;
@@ -776,6 +817,7 @@
         },
 
         async browseFolder(type = 'input') {
+          this.stopAudio();
           this.log(`Opening Windows Folder Dialog...`);
           try {
             const startPath = type === 'input' ? this.targetPath : (this.outputFolder || this.albumRoot);
@@ -815,6 +857,7 @@
         },
 
         async createNewVersion() {
+          this.stopAudio();
           if (!this.targetPath) return;
           this.loading = true;
           try {
@@ -841,6 +884,7 @@
         },
 
         async scanFolder() {
+          this.stopAudio();
           if (!this.targetPath) return;
           this.loading = true;
           this.log(`Scanning input: ${this.targetPath} | Output: ${this.outputFolder || this.currentVersion}`);
