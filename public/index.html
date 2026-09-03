@@ -40,7 +40,7 @@
     <!-- Master Playback HUD Controls -->
     <div class="flex items-center gap-2">
       <template x-if="playingAudio">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2.5">
           <!-- Animated sound wave indicator -->
           <div class="flex items-center gap-0.5 text-cyan-400" title="Audio is playing">
             <span class="w-1 h-3 bg-cyan-400 animate-pulse rounded-full"></span>
@@ -48,7 +48,12 @@
             <span class="w-1 h-2 bg-cyan-400 animate-pulse delay-150 rounded-full"></span>
           </div>
           
-          <span class="text-xs font-bold text-white max-w-[120px] sm:max-w-[160px] truncate" x-text="currentlyPlayingTitle" :title="currentlyPlayingTitle"></span>
+          <span class="text-xs font-bold text-white max-w-[100px] sm:max-w-[140px] truncate" x-text="currentlyPlayingTitle" :title="currentlyPlayingTitle"></span>
+
+          <!-- Rewind 10s -->
+          <button @click="rewindAudio(10)" class="p-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-cyan-400 transition shadow flex items-center justify-center" title="Rewind 10 seconds (-10s)">
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>
+          </button>
 
           <!-- Pause / Resume Toggle -->
           <button @click="toggleGlobalPlayback()" class="p-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white transition shadow flex items-center justify-center" :title="isPlaying ? 'Pause playback' : 'Resume playback'">
@@ -59,6 +64,18 @@
               <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             </template>
           </button>
+
+          <!-- Forward 10s -->
+          <button @click="forwardAudio(10)" class="p-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-cyan-400 transition shadow flex items-center justify-center" title="Forward 10 seconds (+10s)">
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
+          </button>
+
+          <!-- Interactive Scrubber & Timeline -->
+          <div class="flex items-center gap-1.5 bg-gray-900/60 px-2 py-1 rounded-xl border border-gray-800">
+            <span class="text-[10px] font-mono text-gray-300 w-7 text-right" x-text="formatTime(audioCurrentTime)"></span>
+            <input type="range" min="0" :max="audioDuration || 100" step="0.25" :value="audioCurrentTime" @input="seekAudio($event)" class="w-20 sm:w-32 h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-400 hover:accent-cyan-300" title="Scrub / Scroll audio position">
+            <span class="text-[10px] font-mono text-gray-500 w-7" x-text="formatTime(audioDuration)"></span>
+          </div>
 
           <!-- Stop Button -->
           <button @click="stopAudio()" class="p-1.5 rounded-lg bg-red-600/30 hover:bg-red-600/60 text-red-300 border border-red-500/40 transition flex items-center justify-center shadow" title="Stop playback">
@@ -662,6 +679,37 @@
         currentlyPlayingTrack: null,
         currentlyPlayingTitle: '',
         isPlaying: false,
+        audioCurrentTime: 0,
+        audioDuration: 0,
+
+        formatTime(secs) {
+          if (!secs || isNaN(secs)) return '0:00';
+          const m = Math.floor(secs / 60);
+          const s = Math.floor(secs % 60);
+          return `${m}:${s < 10 ? '0' : ''}${s}`;
+        },
+
+        seekAudio(e) {
+          if (this.playingAudio) {
+            const time = parseFloat(e.target.value);
+            this.playingAudio.currentTime = time;
+            this.audioCurrentTime = time;
+          }
+        },
+
+        rewindAudio(secs = 10) {
+          if (this.playingAudio) {
+            this.playingAudio.currentTime = Math.max(0, this.playingAudio.currentTime - secs);
+            this.audioCurrentTime = this.playingAudio.currentTime;
+          }
+        },
+
+        forwardAudio(secs = 10) {
+          if (this.playingAudio) {
+            this.playingAudio.currentTime = Math.min(this.audioDuration || 9999, this.playingAudio.currentTime + secs);
+            this.audioCurrentTime = this.playingAudio.currentTime;
+          }
+        },
 
         stopAudio() {
           if (this.playingAudio) {
@@ -675,6 +723,8 @@
           this.isPlaying = false;
           this.currentlyPlayingTrack = null;
           this.currentlyPlayingTitle = '';
+          this.audioCurrentTime = 0;
+          this.audioDuration = 0;
         },
 
         toggleGlobalPlayback() {
@@ -715,7 +765,15 @@
            
            this.stopAudio();
            
+           this.audioCurrentTime = 0;
+           this.audioDuration = 0;
            this.playingAudio = new Audio('/api/stream?path=' + encodeURIComponent(path));
+           this.playingAudio.ontimeupdate = () => {
+              if (this.playingAudio) this.audioCurrentTime = this.playingAudio.currentTime;
+           };
+           this.playingAudio.onloadedmetadata = () => {
+              if (this.playingAudio) this.audioDuration = this.playingAudio.duration || 0;
+           };
            this.playingAudio.onended = () => { this.stopAudio(); };
            this.playingAudio.onerror = () => { this.stopAudio(); };
            this.playingAudio.play().catch(e => {
