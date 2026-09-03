@@ -14,20 +14,20 @@ cd /d "%~dp0"
 where node >nul 2>nul
 if %ERRORLEVEL% neq 0 (
     color 0C
-    echo [FEHLER] Node.js wurde nicht gefunden!
-    echo Bitte installiere Node.js von https://nodejs.org/
+    echo [ERROR] Node.js was not found!
+    echo Please install Node.js from https://nodejs.org/
     echo.
     pause
     exit /b 1
 )
 
 if not exist "node_modules" (
-    echo [INFO] Erste Ausfuehrung: Installiere Abhaengigkeiten...
+    echo [INFO] First run: Installing dependencies...
     call npm install
     echo.
 )
 
-echo [INFO] Starte Moondiver Studio Webserver...
+echo [INFO] Starting Moondiver Studio webserver...
 echo [INFO] Dashboard: http://localhost:3000
 echo.
 
@@ -37,6 +37,6 @@ node ui-server.js
 
 if %ERRORLEVEL% neq 0 (
     echo.
-    echo [INFO] Server beendet.
+    echo [INFO] Server stopped.
     pause
 )

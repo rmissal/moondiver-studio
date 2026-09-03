@@ -3,28 +3,28 @@
 [![CI](https://github.com/rmissal/moondiver-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/rmissal/moondiver-studio/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Eine professionelle, Standalone Audio-Mastering-Suite mit lokalem Web-Dashboard (`localhost:3000`) und nativer Model Context Protocol (MCP) Integration für **Google Antigravity**.
+A professional, standalone audio mastering suite with a local web dashboard (`localhost:3000`) and native Model Context Protocol (MCP) integration for **Google Antigravity**.
 
-Erlaubt es, einzelne Audio-Dateien oder ganze Album-Projektordner mit maßgeschneiderten Studio-Mastering-Profilen (New Age, Ambient, Instrumental, Cinematic, Rock, Pop etc.) automatisiert zu mastern, Track-Reihenfolgen und Spannungsbögen zu berechnen, Cover-Art hochzuskalieren sowie per KI (Demucs) Stems zu separieren und abzumischen.
+Allows automated mastering of individual audio files or entire album project directories using tailored studio mastering profiles (New Age, Ambient, Instrumental, Cinematic, Rock, Pop, etc.), computing dramatic tension curves and track sequencing, AI-powered stem separation (Demucs) with automatic stem mixing, and artwork upscaling.
 
 ---
 
-## 🚀 Installation & Schnellstart
+## 🚀 Installation & Quick Start
 
-1. **Repository klonen und Abhängigkeiten installieren:**
+1. **Clone the repository and install dependencies:**
    ```bash
    git clone https://github.com/rmissal/moondiver-studio.git
    cd moondiver-studio
    npm install
    ```
 
-2. **Web-Dashboard starten:**
+2. **Start the Web Dashboard:**
    ```bash
    npm run ui
    ```
-   *Öffnet das Mastering Dashboard im Browser unter `http://localhost:3000`.*
+   *Opens the Mastering Dashboard in your browser at `http://localhost:3000`.*
 
-3. **Tests & Coverage ausführen:**
+3. **Run Tests & Test Coverage:**
    ```bash
    npm test
    npm run test:coverage
@@ -32,69 +32,69 @@ Erlaubt es, einzelne Audio-Dateien oder ganze Album-Projektordner mit maßgeschn
 
 ---
 
-## 🛠️ Enthaltene MCP-Tools
+## 🛠️ Included MCP Tools
 
-Das Repository stellt folgende Tools über das Model Context Protocol (MCP) für Antigravity und LLM-Assistenten bereit:
+The repository provides the following tools via the Model Context Protocol (MCP) for Antigravity and LLM assistants:
 
 ### 1. `master_audio`
-Zweistufiges adaptives DSP-Mastering (Pass 1 Loudness-Messung + Pass 2 Mastering mit analogem Tape-Warmth, De-Hiss, De-Essing, Stereo Widening und Anti-Click Fades). Exportiert wahlweise 24-bit Lossless Studio WAV und 320 kbps MP3 inklusive Bereinigung von Metadaten und Einbettung offizieller Studio-Tags.
+Two-pass adaptive linear DSP mastering (Pass 1 loudness analysis + Pass 2 calibrated mastering with analog tape warmth, de-hiss, de-essing, stereo widening, anti-click micro fade-in, and reverb-tail fade-out). Exports 24-bit Lossless Studio WAV and 320 kbps MP3 files with stripped AI watermarks and embedded studio metadata tags.
 
 ### 2. `analyze_audio`
-Misst technische und psychoakustische Werte nach EBU R128 und Apple Digital Masters Vorgaben:
-- EBU R128 Integrated Loudness (LUFS), True Peak (dBTP), Loudness Range (LRA)
-- Automatische Genre-Klassifizierung
-- **Apple Music Quality & Compliance Score** (0–100% Konfidenz-Rating)
+Measures technical and psychoacoustic values compliant with EBU R128 and Apple Digital Masters standards:
+- EBU R128 Integrated Loudness (LUFS), True Peak (dBTP), Loudness Range (LRA), Crest Factor
+- Automatic acoustic genre classification
+- **Apple Music Quality & Compliance Score** (0–100% confidence rating)
 
 ### 3. `sequence_album`
-Berechnet optimale Album-Dramaturgien und Spannungsbögen (`cinematic_journey`, `classic_3_act`, `meditation_descent`, `energy_wave`), injiziert Track-Nummerierungen (`01/14`), erstellt M3U-Playlists (`album_wav.m3u`, `album_mp3.m3u`) und generiert detaillierte `TRACKLIST.md` Dokumentationen.
+Computes optimal album track sequences and dramatic tension arcs (`cinematic_journey`, `classic_3_act`, `meditation_descent`, `energy_wave`), renumbers audio files (`01 - ...`), generates M3U playlists (`album_wav.m3u`, `album_mp3.m3u`), and produces a detailed `TRACKLIST.md` with Mermaid energy diagrams.
 
 ### 4. `mix_stems`
-KI-gestützte Stem-Separation und vollautomatisches Stem-Remixing (Vocals, Bass, Drums, Other) mit profilbasierten EQ- und Raum-Optimierungen.
+AI-powered stem separation and fully automated stem mixing (Vocals, Bass, Drums, Other) with profile-based EQ, anti-bleed gating, and spatial acoustic balancing.
 
 ### 5. `upscale_cover_art`
-KI-basiertes Hochskalieren von Album- und Single-Covern auf verlustfreie Druck- und Streaming-Auflösung (bis zu 4K / 300 DPI).
+AI/Lanczos-enhanced upscaling of album cover artwork to lossless high-resolution standards (up to 3000x3000 / 300 DPI).
 
 ### 6. `list_mastering_presets`
-Gibt alle verfügbaren Sound-Profile und deren DSP-Einstellungen aus.
+Returns all available mastering sound profiles and their DSP filter parameters.
 
 ---
 
-## 🎛️ Mastering-Profile (Presets)
+## 🎛️ Mastering Profiles (Presets)
 
-| Preset | Target LUFS | True Peak | LRA | Stereo Width | Charakteristik |
+| Preset | Target LUFS | True Peak | LRA | Stereo Width | Characteristics |
 | :--- | :---: | :---: | :---: | :---: | :--- |
-| **`auto`** *(Default)* | *Dynamisch* | `-1.5 dBTP` | *Dynamisch* | *1.15* | **Intelligente akustische Analyse in Pass 1** + dynamische Profilwahl |
-| **`new_age_ambient`** | `-16.0` | `-1.5 dBTP` | `15.0` | `1.15` | Offen, samtig, seidiger Glanz, breites Panorama für Flöten, Pads & Klavier |
-| **`cinematic_orchestral`** | `-15.0` | `-1.5 dBTP` | `18.0` | `1.10` | Enorme Dynamik für Orchester, Streicher & Soundtracks mit wuchtigen Bässen |
-| **`acoustic_instrumental`** | `-16.0` | `-1.5 dBTP` | `14.0` | `1.06` | Klarer, natürlicher Klang für Gitarren, Harfe & Soloinstrumente ohne Härte |
-| **`meditation_chillout`** | `-18.0` | `-1.5 dBTP` | `16.0` | `1.20` | Sanft, absolut unaufdringlich, minimale Kompression, maximale Entspannung |
-| **`streaming_pop_standard`** | `-14.0` | `-1.0 dBTP` | `10.0` | `1.00` | Druckvoll und kompakt nach aktuellem Streaming-Radio-Standard |
-| **`stadium_live_rock`** | `-15.0` | `-1.5 dBTP` | `15.0` | `1.25` | Wuchtige Live-Bühne, präsente E-Gitarren, druckvolle Drums und offene Höhen |
-| **`custom`** | *Frei wählbar* | *Frei wählbar* | *Frei* | *Frei* | Manuelle Steuerung aller Filter, Frequenzen und Gain-Werte |
+| **`auto`** *(Default)* | *Dynamic* | `-1.5 dBTP` | *Dynamic* | *1.15* | **Intelligent acoustic analysis in Pass 1** + dynamic profile selection |
+| **`new_age_ambient`** | `-16.0` | `-1.5 dBTP` | `15.0` | `1.15` | Open, smooth, silky treble sheen, wide panorama for pads, flutes & piano |
+| **`cinematic_orchestral`** | `-15.0` | `-1.5 dBTP` | `18.0` | `1.10` | Enormous dynamic range for orchestral swells, strings & soundtracks with powerful sub bass |
+| **`acoustic_instrumental`** | `-16.0` | `-1.5 dBTP` | `14.0` | `1.06` | Clean, organic timbre for acoustic guitars, harp & solo instruments without harshness |
+| **`meditation_chillout`** | `-18.0` | `-1.5 dBTP` | `16.0` | `1.20` | Gentle, transparent, minimal compression, maximal spherical immersion |
+| **`streaming_pop_standard`** | `-14.0` | `-1.0 dBTP` | `10.0` | `1.00` | Punchy and assertive impact adhering to modern streaming radio standards |
+| **`stadium_live_rock`** | `-15.0` | `-1.5 dBTP` | `15.0` | `1.25` | Massive live stage, biting guitars, snappy drums and airy high-end atmosphere |
+| **`custom`** | *Custom* | *Custom* | *Custom* | *Custom* | Full manual control of all filters, frequencies, and gain parameters |
 
 ---
 
 ## 🧪 Testing & Continuous Integration
 
-Das Projekt folgt strengen **Agentic Coding Standards** und verfügt über eine automatisierte Test-Suite:
+This project adheres to strict **Agentic Coding Standards** and includes an automated test harness:
 
-- **Test-Runner:** [Vitest](https://vitest.dev/)
-- **Coverage-Engine:** V8 mit automatischer Markdown-Publizierung im GitHub Step Summary
-- **CI-Pipeline:** GitHub Actions (`.github/workflows/ci.yml`) bei jedem Push & Pull-Request
+- **Test Runner:** [Vitest](https://vitest.dev/)
+- **Coverage Engine:** V8 with automated Markdown publishing to the GitHub Step Summary
+- **CI Pipeline:** GitHub Actions (`.github/workflows/ci.yml`) on every push and pull request
 
 ```bash
-# Tests ausführen
+# Run test suite
 npm test
 
-# Tests mit V8 Coverage-Bericht
+# Run tests with V8 coverage report
 npm run test:coverage
 ```
 
 ---
 
-## ⚙️ Antigravity & MCP Konfiguration
+## ⚙️ Antigravity & MCP Configuration
 
-In `~/.gemini/config/mcp_config.json` eintragen:
+Add to `~/.gemini/config/mcp_config.json`:
 
 ```json
 {
@@ -109,6 +109,6 @@ In `~/.gemini/config/mcp_config.json` eintragen:
 
 ---
 
-## 📄 Lizenz
+## 📄 License
 
-Dieses Projekt ist unter der **Apache License 2.0** lizenziert – siehe [LICENSE](LICENSE) für Details.
+This project is licensed under the **Apache License 2.0** – see the [LICENSE](LICENSE) file for details.

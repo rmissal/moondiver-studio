@@ -32,7 +32,7 @@ describe('Apple Music Compliance & Quality Scoring Engine Tests', () => {
     const result = calculateAppleMusicScore(clippingTrack);
 
     expect(result.breakdown.truePeakCompliance.score).toBe(0);
-    expect(result.breakdown.truePeakCompliance.evaluation).toContain('Kritisch');
+    expect(result.breakdown.truePeakCompliance.evaluation).toContain('Critical');
   });
 
   it('Should penalize 16-bit audio compared to 24-bit studio masters', () => {
@@ -60,7 +60,7 @@ describe('Apple Music Compliance & Quality Scoring Engine Tests', () => {
     const result = calculateAppleMusicScore(tooLoudTrack);
 
     expect(result.breakdown.soundCheckLoudness.score).toBe(5);
-    expect(result.breakdown.soundCheckLoudness.evaluation).toContain('Deutlich zu laut oder zu leise');
+    expect(result.breakdown.soundCheckLoudness.evaluation).toContain('Noticeably too loud or quiet');
   });
 
   it('Should use safe defaults when track properties are omitted', () => {
