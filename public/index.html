@@ -256,14 +256,18 @@
         </div>
 
         <!-- Global Actions Above Table -->
-        <div class="flex flex-col sm:flex-row items-center gap-3">
-          <button @click="batchProcessMissing()" :disabled="!isReadyToProcess()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 text-sm rounded-lg shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2" :title="isReadyToProcess() ? 'Process all missing Split, Mix, and Master steps sequentially' : 'Please specify both Input and Output folders before processing'">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-            Batch Process Missing Steps
+        <div class="flex flex-col sm:flex-row items-center gap-2.5">
+          <button @click="batchProcessMissing()" :disabled="!isReadyToProcess()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-3 text-xs sm:text-sm rounded-lg shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5" :title="isReadyToProcess() ? 'Process only missing Split, Mix, and Master steps sequentially' : 'Please specify both Input and Output folders before processing'">
+            <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            Process Missing
           </button>
-          <button @click="runGlobalSequence()" :disabled="!isReadyToProcess() || tracks.some(t => !t.hasMastered)" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2 px-4 text-sm rounded-lg shadow-lg transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2" :title="isReadyToProcess() ? (tracks.some(t => !t.hasMastered) ? 'All tracks must be mastered before sequencing' : 'Sequence album into dramatic arc, tag metadata, and generate playlists') : 'Please specify both Input and Output folders before sequencing'">
+          <button @click="batchRemixAndMasterAll()" :disabled="!isReadyToProcess()" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 px-3.5 text-xs sm:text-sm rounded-lg shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5" title="Re-mix, Re-master, and Re-generate Quality Reports for all tracks with the currently selected DSP profiles">
+            <svg class="w-4 h-4 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            ⚡ Re-Mix & Master All
+          </button>
+          <button @click="runGlobalSequence()" :disabled="!isReadyToProcess() || tracks.some(t => !t.hasMastered)" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2 px-3.5 text-xs sm:text-sm rounded-lg shadow-lg transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5" :title="isReadyToProcess() ? (tracks.some(t => !t.hasMastered) ? 'All tracks must be mastered before sequencing' : 'Sequence album into dramatic arc, tag metadata, and generate playlists') : 'Please specify both Input and Output folders before sequencing'">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
-            4. Sequence Album
+            5. Sequence Album
           </button>
         </div>
       </div>
@@ -903,46 +907,50 @@
           }
         },
 
-        async runRowAction(action, track) {
+        async runRowAction(action, track, shouldScan = true) {
           if (!this.isReadyToProcess()) {
             this.log('Both Input Folder and Output Folder must be specified before starting processing.', 'error');
-            return;
+            return false;
           }
 
           track.isProcessing = action;
           let success = false;
-          if (action === 'analyze') {
-            success = await this.executeAction('/api/analyze', { targetFile: track.fullPath });
-            if (success) {
-              this.log(`Analyzed raw audio for ${track.name}`, 'success');
+          try {
+            if (action === 'analyze') {
+              success = await this.executeAction('/api/analyze', { targetFile: track.fullPath });
+              if (success) {
+                this.log(`Analyzed raw audio for ${track.name}`, 'success');
+              }
+            } else if (action === 'split') {
+              success = await this.executeAction('/api/split', { targetFile: track.fullPath });
+            } else if (action === 'mix') {
+              success = await this.executeAction('/api/mix', { targetFolder: track.fullPath, preset: track.preset });
+            } else if (action === 'master') {
+              const masterTarget = track.mixedFile ? track.mixedFile : track.fullPath;
+              success = await this.executeAction('/api/master', {
+                targetPath: masterTarget,
+                preset: track.preset,
+                outputFolder: this.outputFolder,
+                trackName: track.name
+              });
+            } else if (action === 'report') {
+              success = await this.executeAction('/api/quality-report', {
+                masteredFile: track.masteredFile,
+                rawFile: track.fullPath,
+                outputFolder: this.outputFolder
+              });
+              if (success) {
+                this.log(`Quality Report generated & saved for ${track.name}`, 'success');
+              }
             }
-          } else if (action === 'split') {
-            success = await this.executeAction('/api/split', { targetFile: track.fullPath });
-          } else if (action === 'mix') {
-            success = await this.executeAction('/api/mix', { targetFolder: track.fullPath, preset: track.preset });
-          } else if (action === 'master') {
-            const masterTarget = track.mixedFile ? track.mixedFile : track.fullPath;
-            success = await this.executeAction('/api/master', {
-              targetPath: masterTarget,
-              preset: track.preset,
-              outputFolder: this.outputFolder,
-              trackName: track.name
-            });
-          } else if (action === 'report') {
-            success = await this.executeAction('/api/quality-report', {
-              masteredFile: track.masteredFile,
-              rawFile: track.fullPath,
-              outputFolder: this.outputFolder
-            });
-            if (success) {
-              this.log(`Quality Report generated & saved for ${track.name}`, 'success');
-            }
+          } finally {
+            track.isProcessing = null;
           }
-          track.isProcessing = null;
           
-          if (success) {
+          if (success && shouldScan) {
             await this.scanFolder();
           }
+          return success;
         },
 
         async batchProcessColumn(action) {
@@ -954,20 +962,21 @@
           this.log(`Starting Batch Processing for column: ${action.toUpperCase()}`, 'info');
           for (let i = 0; i < this.tracks.length; i++) {
              const track = this.tracks[i];
-             if (action === 'analyze' && !track.hasAnalyzed) {
+             if (action === 'analyze') {
                 this.log(`[Batch] Analyzing ${track.name}...`);
-                await this.runRowAction('analyze', track);
+                await this.runRowAction('analyze', track, false);
              } else if (action === 'split' && !track.hasSplit) {
                 this.log(`[Batch] Splitting ${track.name}...`);
-                await this.runRowAction('split', track);
+                await this.runRowAction('split', track, false);
              } else if (action === 'mix' && track.hasSplit) {
                 this.log(`[Batch] Mixing ${track.name} with profile '${track.preset}'...`);
-                await this.runRowAction('mix', track);
+                await this.runRowAction('mix', track, false);
              } else if (action === 'master' && (track.hasMixed || track.hasSplit)) {
                 this.log(`[Batch] Mastering ${track.name} with profile '${track.preset}'...`);
-                await this.runRowAction('master', track);
+                await this.runRowAction('master', track, false);
              }
           }
+          await this.scanFolder();
           this.log(`Batch Processing for ${action.toUpperCase()} Complete!`, 'success');
         },
 
@@ -982,9 +991,10 @@
              const track = this.tracks[i];
              if (track.hasMastered) {
                 this.log(`[Quality Report] Analyzing master: ${track.name}...`);
-                await this.runRowAction('report', track);
+                await this.runRowAction('report', track, false);
              }
           }
+          await this.scanFolder();
           this.log('All Quality Reports generated and saved!', 'success');
         },
 
@@ -994,31 +1004,79 @@
             return;
           }
 
-          this.log(`Starting Full 4-Step Pipeline for all tracks into: ${this.outputFolder}...`, 'info');
+          this.log(`Checking missing steps for all tracks in: ${this.outputFolder}...`, 'info');
+          let countProcessed = 0;
           for (let i = 0; i < this.tracks.length; i++) {
              const track = this.tracks[i];
              if (!track.hasAnalyzed) {
+                countProcessed++;
                 this.log(`[Step 1/4] Analyzing raw audio: ${track.name}...`);
-                await this.runRowAction('analyze', track);
+                await this.runRowAction('analyze', track, false);
              }
              if (!track.hasSplit) {
+                countProcessed++;
                 this.log(`[Step 2/4] Splitting stems: ${track.name}...`);
-                await this.runRowAction('split', track);
+                await this.runRowAction('split', track, false);
              }
              if (!track.hasMixed) {
+                countProcessed++;
                 this.log(`[Step 3/4] Mixing stems: ${track.name}...`);
-                await this.runRowAction('mix', track);
+                await this.runRowAction('mix', track, false);
              }
              if (!track.hasMastered) {
+                countProcessed++;
                 this.log(`[Step 4/4] Mastering: ${track.name} into ${this.outputFolder}...`);
-                await this.runRowAction('master', track);
+                await this.runRowAction('master', track, false);
              }
              if (track.hasMastered && !track.masterStats) {
+                countProcessed++;
                 this.log(`[Report] Generating Quality Report for ${track.name}...`);
-                await this.runRowAction('report', track);
+                await this.runRowAction('report', track, false);
              }
           }
-          this.log('Full Processing Pipeline & Reports Complete!', 'success');
+          await this.scanFolder();
+          if (countProcessed === 0) {
+            this.log(`All tracks in this folder are already fully processed! If you changed DSP profiles and want to apply them, click '⚡ Re-Mix & Master All'.`, 'info');
+          } else {
+            this.log(`Batch processed ${countProcessed} missing steps successfully!`, 'success');
+          }
+        },
+
+        async batchRemixAndMasterAll() {
+          if (!this.isReadyToProcess()) {
+            this.log('Both Input Folder and Output Folder must be specified before processing.', 'error');
+            return;
+          }
+
+          this.log(`⚡ Starting Full Re-Mix & Master for all ${this.tracks.length} tracks with profile: ${this.globalPreset}...`, 'info');
+          for (let i = 0; i < this.tracks.length; i++) {
+             const track = this.tracks[i];
+             // Step 1: Ensure Analyze
+             if (!track.hasAnalyzed) {
+                this.log(`[Step 1/4] Analyzing: ${track.name}...`);
+                await this.runRowAction('analyze', track, false);
+             }
+             // Step 2: Ensure Stems are split
+             if (!track.hasSplit) {
+                this.log(`[Step 2/4] Splitting stems: ${track.name}...`);
+                await this.runRowAction('split', track, false);
+             }
+             // Step 3: Re-Mix with current DSP profile
+             if (track.hasSplit) {
+                this.log(`[Step 3/4] Re-Mixing stems with profile '${track.preset}': ${track.name}...`);
+                await this.runRowAction('mix', track, false);
+             }
+             // Step 4: Re-Master with current DSP profile
+             if (track.hasMixed || track.hasSplit) {
+                this.log(`[Step 4/4] Re-Mastering with profile '${track.preset}': ${track.name}...`);
+                await this.runRowAction('master', track, false);
+             }
+             // Step 5: Refresh Quality Report
+             this.log(`[Report] Updating Quality Report: ${track.name}...`);
+             await this.runRowAction('report', track, false);
+          }
+          await this.scanFolder();
+          this.log('⚡ All tracks successfully re-mixed, re-mastered, and quality-reported!', 'success');
         },
 
         async runGlobalSequence() {
