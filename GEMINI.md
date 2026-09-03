@@ -1,7 +1,7 @@
 # Moondiver Studio - Guidelines & Rules
 
 ## Overview
-Standalone audio mastering suite & MCP server for SinnTaucher.
+Standalone audio mastering suite & MCP server.
 
 ## MCP Configuration
 - **Server:** `audio-mastering` in `~/.gemini/config/mcp_config.json`

@@ -1,11 +1,11 @@
 @echo off
 chcp 65001 >nul
-title SinnTaucher Moondiver Studio
+title Moondiver Studio
 color 0B
 
 echo.
 echo =======================================================================
-echo          🎵 SinnTaucher Moondiver Studio - Audio Mastering Suite
+echo          🎵 Moondiver Studio - Audio Mastering Suite
 echo =======================================================================
 echo.
 
@@ -27,7 +27,7 @@ if not exist "node_modules" (
     echo.
 )
 
-echo [INFO] Starte SinnTaucher Studio Webserver...
+echo [INFO] Starte Moondiver Studio Webserver...
 echo [INFO] Dashboard: http://localhost:3000
 echo.
 
