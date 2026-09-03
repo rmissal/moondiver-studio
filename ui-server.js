@@ -596,6 +596,9 @@ app.post('/api/quality-report', async (req, res) => {
       masterFile: resolvedMasteredFile,
       preset: resolvedPresetKey,
       presetName: resolvedPresetName,
+      appliedPreset: resolvedPresetKey,
+      appliedPresetName: resolvedPresetName,
+      profile: resolvedPresetName,
       genre: resolvedPresetName,
       autoDetectedGenre: {
         preset: resolvedPresetKey,
