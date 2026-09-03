@@ -789,7 +789,7 @@
            this.currentlyPlayingTrack = trackId;
            this.currentlyPlayingTitle = `${track.name} [${type.toUpperCase()}]`;
            
-           const streamUrl = '/api/stream?path=' + encodeURIComponent(path);
+           const streamUrl = '/api/stream?path=' + encodeURIComponent(path) + '&_t=' + Date.now();
            audio.src = streamUrl;
            audio.volume = this.audioVolume;
            audio.load();
