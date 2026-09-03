@@ -1,12 +1,12 @@
-const express = require('express');
-const path = require('path');
+﻿import express from 'express';
+import * as path from 'path';
 const { masterAudio } = require('./lib/masterer');
 const { sequenceAlbum } = require('./lib/sequencer');
 const { mixStems } = require('./lib/mixer');
-const { PRESETS } = require('./lib/presets');
-const { analyzeFile } = require('./lib/analyzer');
+import { PRESETS } from './lib/presets';
+import { analyzeFile } from './lib/analyzer';
 const { spawn } = require('child_process');
-const fs = require('fs');
+import * as fs from 'fs';
 const os = require('os');
 
 const app = express();

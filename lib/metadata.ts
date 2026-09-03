@@ -1,11 +1,11 @@
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const { spawn } = require('child_process');
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+import { spawn } from 'child_process';
 
-const AUDIO_EXTENSIONS = new Set(['.wav', '.mp3', '.flac', '.aiff', '.m4a', '.ogg']);
+export const AUDIO_EXTENSIONS = new Set(['.wav', '.mp3', '.flac', '.aiff', '.m4a', '.ogg']);
 
-function findLocalFfmpeg() {
+export function findLocalFfmpeg() {
   const localFfmpeg = path.resolve(__dirname, '..', 'ffmpeg', 'bin', 'ffmpeg.exe');
   if (fs.existsSync(localFfmpeg)) {
     return localFfmpeg;
@@ -13,7 +13,7 @@ function findLocalFfmpeg() {
   return 'ffmpeg';
 }
 
-function findLocalFfprobe() {
+export function findLocalFfprobe() {
   const localFfprobe = path.resolve(__dirname, '..', 'ffmpeg', 'bin', 'ffprobe.exe');
   if (fs.existsSync(localFfprobe)) {
     return localFfprobe;
@@ -21,7 +21,7 @@ function findLocalFfprobe() {
   return 'ffprobe';
 }
 
-function runCommand(cmd, args) {
+export function runCommand(cmd, args) {
   return new Promise((resolve, reject) => {
     const p = spawn(cmd, args, { windowsHide: true });
     let stdout = '';
@@ -46,7 +46,7 @@ function runCommand(cmd, args) {
   });
 }
 
-async function embedStudioMetadata(filePath, meta = {}) {
+export async function embedStudioMetadata(filePath, meta = {}) {
   const ffmpegBin = findLocalFfmpeg();
   const artist = meta.artist || 'Unknown Artist';
   const album = meta.album || 'Unknown Album';
@@ -112,11 +112,3 @@ async function embedStudioMetadata(filePath, meta = {}) {
     }
   }
 }
-
-module.exports = {
-  AUDIO_EXTENSIONS,
-  embedStudioMetadata,
-  findLocalFfmpeg,
-  findLocalFfprobe,
-  runCommand
-};

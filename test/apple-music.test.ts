@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-const { calculateAppleMusicScore } = require('../lib/apple-music');
+﻿import { describe, it, expect } from 'vitest';
+import { calculateAppleMusicScore } from '../lib/apple-music';
 
 describe('Apple Music Compliance & Quality Scoring Engine Tests', () => {
   it('Should award full score (100%) for ideal Apple Digital Masters specifications', () => {

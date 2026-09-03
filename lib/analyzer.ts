@@ -3,14 +3,14 @@
  * Measures integrated LUFS, True Peak, LRA, Spectral DNA, and Apple Music Readiness
  */
 
-const fs = require('fs');
-const path = require('path');
-const { PRESETS } = require('./presets');
-const { findLocalFfmpeg, findLocalFfprobe, runCommand, AUDIO_EXTENSIONS } = require('./metadata');
-const { calculateAppleMusicScore } = require('./apple-music');
+import * as fs from 'fs';
+import * as path from 'path';
+import { PRESETS } from './presets';
+import { findLocalFfmpeg, findLocalFfprobe, runCommand, AUDIO_EXTENSIONS } from './metadata';
+import { calculateAppleMusicScore } from './apple-music';
 
 // Auto-detect musical genre & acoustic profile using keywords, metadata & spectral DNA
-function detectGenre(arg1 = {}, arg2 = {}, arg3 = '') {
+export function detectGenre(arg1 = {}, arg2 = {}, arg3 = '') {
   let metadata = {};
   let audioMetrics = {};
   let filePath = '';
@@ -259,7 +259,7 @@ function detectGenre(arg1 = {}, arg2 = {}, arg3 = '') {
 }
 
 // Analyze audio loudness, metadata, auto-detected genre and Apple Music Compliance
-async function analyzeFile(filePath) {
+export async function analyzeFile(filePath) {
   const ffmpegBin = findLocalFfmpeg();
   const ffprobeBin = findLocalFfprobe();
 
@@ -345,7 +345,7 @@ async function analyzeFile(filePath) {
 }
 
 // Find all audio tracks in directory
-function resolveAudioFiles(targetPath) {
+export function resolveAudioFiles(targetPath) {
   const resolved = path.resolve(targetPath);
   const stats = fs.statSync(resolved);
 

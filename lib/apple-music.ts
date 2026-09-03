@@ -3,7 +3,7 @@
  * Apple Digital Masters (ADM), EBU R128 Sound Check, and Intersample Distortion Protection
  */
 
-function calculateAppleMusicScore(track = {}) {
+export function calculateAppleMusicScore(track: any = {}) {
   const tp = track.truePeakDbtp !== null && track.truePeakDbtp !== undefined ? track.truePeakDbtp : -3.0;
   const lufs =
     track.integratedLoudnessLufs !== null && track.integratedLoudnessLufs !== undefined
@@ -101,5 +101,3 @@ function calculateAppleMusicScore(track = {}) {
     }
   };
 }
-
-module.exports = { calculateAppleMusicScore };

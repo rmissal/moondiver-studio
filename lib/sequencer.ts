@@ -3,11 +3,11 @@
  * Computes optimal track ordering, enforces sequel spacing & chronology, generates M3U playlists and TRACKLIST.md
  */
 
-const fs = require('fs');
-const path = require('path');
-const { calculateAppleMusicScore } = require('./apple-music');
-const { embedStudioMetadata } = require('./metadata');
-const { analyzeFile, resolveAudioFiles } = require('./analyzer');
+import * as fs from 'fs';
+import * as path from 'path';
+import { calculateAppleMusicScore } from './apple-music';
+import { embedStudioMetadata } from './metadata';
+import { analyzeFile, resolveAudioFiles } from './analyzer';
 
 function calculateTrackEnergy(track) {
   const lra = track.loudnessRangeLra !== null && track.loudnessRangeLra !== undefined ? track.loudnessRangeLra : 10.0;
@@ -58,7 +58,7 @@ function getPartNumber(title) {
 }
 
 // Sequence album tracks according to the chosen dramatic arc model
-function sequenceAlbumTracks(tracks, model = 'cinematic_journey') {
+export function sequenceAlbumTracks(tracks, model = 'cinematic_journey') {
   const enriched = tracks.map(t => {
     const cleanTitle = path.basename(t.file, path.extname(t.file)).replace(/^\d+[\s_-]*/, '');
     const energy = calculateTrackEnergy({ ...t, file: cleanTitle });
@@ -235,7 +235,7 @@ function sequenceAlbumTracks(tracks, model = 'cinematic_journey') {
 }
 
 // Full Sequencing Workflow (Renumbering, Metadata, Playlists, TRACKLIST.md)
-async function sequenceAlbum(targetPath, options = {}) {
+export async function sequenceAlbum(targetPath, options = {}) {
   const {
     arcModel = 'cinematic_journey',
     applyRenumbering = false,
@@ -286,7 +286,7 @@ async function sequenceAlbum(targetPath, options = {}) {
       }
     }
     a.file = file;
-    a.title = cleanBase;
+    (a as any).title = cleanBase;
     analyzedTracks.push(a);
   }
 

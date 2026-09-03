@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-const { AUDIO_EXTENSIONS, findLocalFfmpeg } = require('../lib/metadata');
+﻿import { describe, it, expect } from 'vitest';
+import { AUDIO_EXTENSIONS, findLocalFfmpeg } from '../lib/metadata';
 
 describe('Metadata & Audio Tooling Utilities Tests', () => {
   it('Should recognise all lossless and lossy studio audio extensions', () => {

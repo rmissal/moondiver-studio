@@ -1,18 +1,18 @@
-/**
+﻿/**
  * Two-Pass Adaptive DSP Linear Mastering Engine
  * Apple Digital Masters & EBU R128 Compliant Two-Pass Mastering
  */
 
-const fs = require('fs');
-const path = require('path');
-const { PRESETS } = require('./presets');
+import * as fs from 'fs';
+import * as path from 'path';
+import { PRESETS } from './presets';
 const { buildFilterChain } = require('./dsp');
-const { findLocalFfmpeg, runCommand, embedStudioMetadata } = require('./metadata');
+import { findLocalFfmpeg, runCommand, embedStudioMetadata } from './metadata';
 const { analyzeFile, resolveAudioFiles } = require('./analyzer');
-const { calculateAppleMusicScore } = require('./apple-music');
+import { calculateAppleMusicScore } from './apple-music';
 
 // Master a single audio file with two-pass calibrated EBU R128 processing
-async function masterSingleFile(inputFile, options = {}) {
+export async function masterSingleFile(inputFile, options = {}) {
   const ffmpegBin = findLocalFfmpeg();
   const bitDepth = options.bitDepth || 24;
   const createMp3 = options.createMp3 !== false;

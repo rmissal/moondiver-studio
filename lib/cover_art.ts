@@ -1,12 +1,12 @@
-const { exec } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const { findLocalFfmpeg } = require('./metadata');
+﻿import { exec } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
+import { findLocalFfmpeg } from './metadata';
 
 /**
  * Upscales album cover artwork to Apple Music standards (3000x3000 JPG).
  */
-async function upscaleCoverArt(targetPath) {
+export async function upscaleCoverArt(targetPath) {
   return new Promise((resolve, reject) => {
     // Resolve target folder
     const resolvedPath = path.resolve(targetPath);
@@ -77,5 +77,3 @@ async function upscaleCoverArt(targetPath) {
     processFile(0);
   });
 }
-
-module.exports = { upscaleCoverArt };

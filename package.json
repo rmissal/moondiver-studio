@@ -1,13 +1,14 @@
-{
+﻿{
   "name": "audio-mastering-mcp",
   "version": "1.2.0",
+  "type": "module",
   "description": "Professional Two-Pass DSP Audio Mastering & Album Sequencing MCP Server",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "tsx index.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "ui": "node ui-server.js",
+    "ui": "tsx ui-server.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

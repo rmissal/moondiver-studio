@@ -43,7 +43,7 @@ echo.
 start "" cmd /c "timeout /t 2 /nobreak >nul & start http://localhost:3000"
 
 :: Start the server. Redirecting stdin from nul skips the 'Terminate batch job' prompt on Ctrl+C.
-node ui-server.js < nul
+npx tsx ui-server.ts < nul
 
 :: Reset ANSI on exit
 echo %ESC%[0m

@@ -1,8 +1,8 @@
-const fs = require('fs');
-const path = require('path');
-const { spawn } = require('child_process');
-const { PRESETS } = require('./presets');
-const { findLocalFfmpeg } = require('./metadata');
+﻿import * as fs from 'fs';
+import * as path from 'path';
+import { spawn } from 'child_process';
+import { PRESETS } from './presets';
+import { findLocalFfmpeg, runCommand } from './metadata';
 
 function runFfmpeg(args) {
   return new Promise((resolve, reject) => {
@@ -25,7 +25,7 @@ function runFfmpeg(args) {
   });
 }
 
-async function mixStems(targetFolder, options = {}) {
+export async function mixStems(targetFolder, options = {}) {
   const { preset = 'auto', outputFolder = 'mixed_stems' } = options;
 
   let resolvedFolder = path.resolve(targetFolder);
@@ -162,5 +162,3 @@ async function mixStems(targetFolder, options = {}) {
     appliedPreset: preset
   };
 }
-
-module.exports = { mixStems };

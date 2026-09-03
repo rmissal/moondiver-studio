@@ -1,10 +1,50 @@
-/**
+﻿/**
  * Mastering Presets & Genre Acoustic Profiles
  * Studio Audio Toolchain - Conservative, Pristine Audiophile Settings
  * Designed for 100% Apple Digital Masters Compliance without artificial phasing or metallic coloration
  */
 
-const PRESETS = {
+export interface StemMixConfig {
+  volume: number;
+  highpass?: number;
+  lowpass?: number;
+  trebleGain?: number;
+  trebleFreq?: number;
+  mono?: boolean;
+  boostFreq?: number;
+  boostGain?: number;
+  punchFreq?: number;
+  punchGain?: number;
+  width?: number;
+  deMudFreq?: number;
+  deMudGain?: number;
+}
+
+export interface PresetStemMix {
+  vocals: StemMixConfig;
+  bass: StemMixConfig;
+  drums: StemMixConfig;
+  other: StemMixConfig;
+}
+
+export interface DSPProfile {
+  name: string;
+  description: string;
+  targetLufs: number;
+  truePeak: number;
+  lra: number;
+  stereoWidth: number;
+  highpassFreq: number;
+  bassGainDb: number;
+  bassFreq: number;
+  midDeMudGainDb: number;
+  midDeMudFreq: number;
+  airTrebleGainDb: number;
+  airTrebleFreq: number;
+  stemMix: PresetStemMix;
+}
+
+export const PRESETS: Record<string, DSPProfile> = {
   auto: {
     name: 'Intelligent Auto-Detect (Default)',
     description: 'Analyzes the acoustic DNA in Pass 1 and applies transparent, calibrated mastering.',
@@ -283,5 +323,3 @@ const PRESETS = {
     }
   }
 };
-
-module.exports = { PRESETS };

@@ -1,5 +1,5 @@
-const { execSync } = require('child_process');
-const os = require('os');
+﻿import { execSync } from 'child_process';
+import * as os from 'os';
 
 const isWin = os.platform() === 'win32';
 

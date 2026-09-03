@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-const { PRESETS } = require('../lib/presets');
+﻿import { describe, it, expect } from 'vitest';
+import { PRESETS } from '../lib/presets';
 
 describe('Mastering Presets Library Tests', () => {
   const requiredPresets = [

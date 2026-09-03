@@ -1,12 +1,12 @@
-/**
+﻿/**
  * DSP Filter Graph Engine
  * Builds Two-Pass Calibrated EBU R128 Loudness Normalization, EQ, Tape Warmth,
  * Auto-Lead-Trim (Apple Music <500ms Compliance), Anti-Click Fade-In, and Reverb-Tail Fade-Out
  */
 
-const { PRESETS } = require('./presets');
+import { PRESETS } from './presets';
 
-function buildFilterChain(options = {}, measured = null, duration = null) {
+export function buildFilterChain(options = {}, measured = null, duration = null) {
   const presetKey = options.preset || 'new_age_ambient';
   const base = PRESETS[presetKey] || PRESETS.new_age_ambient;
 
@@ -105,5 +105,3 @@ function buildFilterChain(options = {}, measured = null, duration = null) {
     }
   };
 }
-
-module.exports = { buildFilterChain };

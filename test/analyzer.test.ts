@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it, expect } from 'vitest';
 import { detectGenre } from '../lib/analyzer';
 
 describe('Analyzer Genre Detection Tests', () => {

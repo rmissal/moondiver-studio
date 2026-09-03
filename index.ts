@@ -1,14 +1,14 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 /**
  * Audio Mastering MCP Server
  * Model Context Protocol integration for DSP Mastering
  */
 
-const { PRESETS } = require('./lib/presets');
+import { PRESETS } from './lib/presets';
 const { analyzeFile, resolveAudioFiles } = require('./lib/analyzer');
 const { masterAudio } = require('./lib/masterer');
 const { sequenceAlbum } = require('./lib/sequencer');
-const { upscaleCoverArt } = require('./lib/cover_art');
+import { upscaleCoverArt } from './lib/cover_art';
 const { mixStems } = require('./lib/mixer');
 
 const TOOLS = [
