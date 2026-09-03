@@ -495,7 +495,7 @@ app.post('/api/analyze', async (req, res) => {
 // API: Generate / Update Quality Report (for new and existing masters)
 app.post('/api/quality-report', async (req, res) => {
   try {
-    let { masteredFile, rawFile, outputFolder } = req.body;
+    let { masteredFile, rawFile, outputFolder, preset } = req.body;
     let resolvedMasteredFile = masteredFile ? path.resolve(masteredFile) : null;
     if ((!resolvedMasteredFile || !fs.existsSync(resolvedMasteredFile)) && outputFolder) {
       const base = path.basename(masteredFile || '');
@@ -520,6 +520,13 @@ app.post('/api/quality-report', async (req, res) => {
       return res.status(400).json({ error: `Valid masteredFile is required (could not find '${masteredFile}')` });
     }
 
+    // Check if an existing stats JSON was generated during mastering
+    const jsonPath = resolvedMasteredFile.replace(/\.wav$/i, '.json');
+    let existingStats = null;
+    if (fs.existsSync(jsonPath)) {
+      try { existingStats = JSON.parse(fs.readFileSync(jsonPath, 'utf8')); } catch {}
+    }
+
     // 1. Analyze mastered file
     const masterMetrics = await analyzeFile(resolvedMasteredFile);
 
@@ -536,14 +543,28 @@ app.post('/api/quality-report', async (req, res) => {
       }
     }
 
-    // 3. Compile full Quality Report
+    // 3. Resolve Effective Preset & Genre Name
+    const resolvedPresetKey = (preset && preset !== 'auto')
+      ? preset
+      : (existingStats?.preset || existingStats?.appliedPreset || masterMetrics.autoDetectedGenre?.detectedPreset || 'new_age_ambient');
+    const resolvedPresetName = PRESETS[resolvedPresetKey]?.name || existingStats?.presetName || existingStats?.appliedPresetName || masterMetrics.autoDetectedGenre?.genreName || resolvedPresetKey;
+
+    // 4. Compile full Quality Report
     const appleRating = masterMetrics.appleMusicConfidence?.confidenceRating || (masterMetrics.appleMusicConfidence?.scorePercent >= 80 ? 'High' : 'Medium');
 
     const report = {
       status: 'success',
       track: path.basename(resolvedMasteredFile, path.extname(resolvedMasteredFile)),
       masterFile: resolvedMasteredFile,
-      autoDetectedGenre: masterMetrics.autoDetectedGenre || rawMetrics?.autoDetectedGenre,
+      preset: resolvedPresetKey,
+      presetName: resolvedPresetName,
+      genre: resolvedPresetName,
+      autoDetectedGenre: {
+        preset: resolvedPresetKey,
+        name: resolvedPresetName,
+        genreName: resolvedPresetName,
+        detectedPreset: resolvedPresetKey
+      },
       kpiComparison: {
         lufs: {
           beforeMeasured: rawMetrics ? `${rawMetrics.integratedLoudnessLufs} LUFS` : 'N/A',
@@ -581,6 +602,7 @@ app.post('/api/quality-report', async (req, res) => {
         appleMusicConfidence: appleRating
       },
       optimizations: [
+        `Profile: ${resolvedPresetName}`,
         `Integrated Loudness: ${masterMetrics.integratedLoudnessLufs} LUFS (Broadcast calibrated)`,
         `True Peak: ${masterMetrics.truePeakDbtp} dBTP (Inter-sample peak safe)`,
         `Loudness Range: ${masterMetrics.loudnessRangeLra} LU (Dynamic transparency preserved)`,

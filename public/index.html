@@ -583,7 +583,7 @@
                          <div class="flex items-center justify-between gap-3" title="Selected or Auto-detected Genre Profile">
                             <div class="flex items-center gap-2">
                               <span class="text-gray-500 w-14">Profile:</span>
-                              <span class="text-amber-300 font-semibold" x-text="track.masterStats.autoDetectedGenre?.genreName || track.masterStats.autoDetectedGenre?.name || '—'"></span>
+                              <span class="text-amber-300 font-semibold" x-text="track.masterStats.presetName || (presets[track.masterStats.preset]?.name) || track.masterStats.genre || track.masterStats.autoDetectedGenre?.genreName || track.masterStats.autoDetectedGenre?.name || (presets[track.preset]?.name) || '—'"></span>
                             </div>
                             <button @click="runRowAction('report', track)" class="text-gray-500 hover:text-emerald-400 transition" title="Re-analyze master & refresh report">
                               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
@@ -1119,9 +1119,10 @@
             this.tracks = data.tracks.map(t => {
               const prevTrack = (this.tracks || []).find(p => p.name === t.name);
               const isDirect = (this.directMasterMode !== undefined ? this.directMasterMode : (prevTrack?.isDirect ?? (t.hasMastered && !t.hasMixed)));
+              const existingMasterPreset = t.masterStats?.preset || t.masterStats?.appliedPreset;
               return {
                 ...t,
-                preset: prevTrack?.preset || this.globalPreset || 'auto',
+                preset: prevTrack?.preset || (this.globalPreset && this.globalPreset !== 'auto' ? this.globalPreset : (existingMasterPreset || 'auto')),
                 showStats: false,
                 isProcessing: null,
                 isDirect: isDirect,
@@ -1215,7 +1216,8 @@
               const res = await this.executeAction('/api/quality-report', {
                 masteredFile: targetMaster || track.name,
                 rawFile: track.fullPath,
-                outputFolder: this.outputFolder
+                outputFolder: this.outputFolder,
+                preset: track.preset || this.globalPreset
               });
               if (res) {
                 success = true;
