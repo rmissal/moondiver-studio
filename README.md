@@ -7,7 +7,7 @@
 [![CI](https://github.com/rmissal/moondiver-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/rmissal/moondiver-studio/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-A professional, standalone audio mastering suite with a local web dashboard (`localhost:3000`) and native Model Context Protocol (MCP) integration for **Google Antigravity**.
+A professional, standalone audio mastering suite with a local web d````bashboard (`localhost:3000`) and native Model Context Protocol (MCP) integration for **Google Antigravity**.
 
 Allows automated mastering of individual audio files or entire album project directories using tailored studio mastering profiles (New Age, Ambient, Instrumental, Cinematic, Rock, Pop, etc.), computing dramatic tension curves and track sequencing, AI-powered stem separation (Demucs) with automatic stem mixing, and artwork upscaling.
 
@@ -23,24 +23,23 @@ Before installing Moondiver Studio, ensure you have the following system depende
 - **Python 3.10+** (Required for AI Demucs Stem Separation)
 - **FFmpeg & FFprobe** (Required for Audio Mastering & Processing)
   - **Windows:** Download a static build from [Gyan.dev](https://www.gyan.dev/ffmpeg/builds/) or [BtbN](https://github.com/BtbN/FFmpeg-Builds/releases). Extract the .zip and place the fmpeg.exe and fprobe.exe files into the fmpeg/bin/ folder inside this repository.
-  - **macOS/Linux:** Install globally via rew install ffmpeg or sudo apt install ffmpeg.
+  - **macOS/Linux:** Install globally via "brew install ffmpeg" or "sudo apt install ffmpeg".
 
 ### 2. Clone & Setup
 
-Moondiver Studio includes an automated bootstrap script (setup.js) that will install all Node.js modules, detect your Python environment, install CUDA-accelerated PyTorch (on Windows), and set up the Meta Demucs AI separation libraries.
+Moondiver Studio includes an automated bootstrap script (setup.ts) that will install all Node.js modules, detect your Python environment, install CUDA-accelerated PyTorch (on Windows), and set up the Meta Demucs AI separation libraries.
 
 `ash
 git clone https://github.com/rmissal/moondiver-studio.git
 cd moondiver-studio
-node setup.js
-`
+npx tsx setup.ts
+``n
 
 ### 3. Start the Web Dashboard
 
 `ash
 npm run ui
-`
-
+``n
 _(Or simply double click **start.bat** on Windows for a styled ANSI CLI terminal experience!)_
 
 _Opens the Mastering Dashboard in your browser at http://localhost:3000._
@@ -50,8 +49,7 @@ _Opens the Mastering Dashboard in your browser at http://localhost:3000._
 `ash
 npm test
 npm run test:coverage
-`
-
+``n
 ---
 
 ## 🛠️ Included MCP Tools
@@ -118,13 +116,17 @@ This project adheres to strict **Agentic Coding Standards** and includes an auto
 - **Coverage Engine:** V8 with automated Markdown publishing to the GitHub Step Summary
 - **CI Pipeline:** GitHub Actions (`.github/workflows/ci.yml`) on every push and pull request
 
-```bash
+`b`bash
+
 # Run test suite
+
 npm test
 
 # Run tests with V8 coverage report
+
 npm run test:coverage
-```
+
+````
 
 ---
 
@@ -141,7 +143,7 @@ Add to `~/.gemini/config/mcp_config.json`:
     }
   }
 }
-```
+````
 
 ---
 
