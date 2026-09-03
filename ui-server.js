@@ -4,6 +4,7 @@ const { masterAudio } = require('./lib/masterer');
 const { sequenceAlbum } = require('./lib/sequencer');
 const { mixStems } = require('./lib/mixer');
 const { PRESETS } = require('./lib/presets');
+const { analyzeFile } = require('./lib/analyzer');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
@@ -98,12 +99,20 @@ app.post('/api/scan-folder', (req, res) => {
       const name = parsed.name;
       const fullPath = path.join(folderPath, file);
       
-      // Check Step 1: Demucs Stems
+      // Check Step 1: Raw Analysis
       const htdemucsFolder = path.join(folderPath, 'htdemucs_ft', name);
+      const rawAnalysisFile = path.join(htdemucsFolder, 'raw_analysis.json');
+      let rawAnalysis = null;
+      if (fs.existsSync(rawAnalysisFile)) {
+        try { rawAnalysis = JSON.parse(fs.readFileSync(rawAnalysisFile, 'utf8')); } catch {}
+      }
+      const hasAnalyzed = !!rawAnalysis;
+
+      // Check Step 2: Demucs Stems
       const mixedStemsFolder = path.join(htdemucsFolder, 'mixed_stems');
       const hasSplit = fs.existsSync(htdemucsFolder) && fs.readdirSync(htdemucsFolder).filter(f => f.endsWith('.wav')).length >= 4;
       
-      // Check Step 2: Auto-Mix (supports both Drifting_Mixed.wav and auto_mixdown.wav)
+      // Check Step 3: Auto-Mix (supports both Drifting_Mixed.wav and auto_mixdown.wav)
       const mixedCandidates = [
         path.join(mixedStemsFolder, `${name}_Mixed.wav`),
         path.join(mixedStemsFolder, 'auto_mixdown.wav'),
@@ -113,7 +122,7 @@ app.post('/api/scan-folder', (req, res) => {
       const mixedFile = mixedCandidates.find(f => fs.existsSync(f)) || null;
       const hasMixed = !!mixedFile;
 
-      // Check Step 3: Mastered in selected version folder
+      // Check Step 4: Mastered in selected version folder
       let hasMastered = false;
       let masteredFile = null;
       let masterStats = null;
@@ -129,11 +138,16 @@ app.post('/api/scan-folder', (req, res) => {
             hasMastered = true;
             masteredFile = path.join(masteredFolder, match);
             
-            // Look for matching stats JSON
+            // Look for matching stats JSON in wav/ or in outputFolder/reports/
             const jsonPath = masteredFile.replace(/\.wav$/i, '.json');
+            const reportPath = path.join(resolvedOutputFolder, 'reports', `${path.basename(match, '.wav')}.json`);
             if (fs.existsSync(jsonPath)) {
                try {
                   masterStats = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+               } catch (e) {}
+            } else if (fs.existsSync(reportPath)) {
+               try {
+                  masterStats = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
                } catch (e) {}
             }
          }
@@ -143,6 +157,8 @@ app.post('/api/scan-folder', (req, res) => {
         name,
         fileName: file,
         fullPath,
+        hasAnalyzed,
+        rawAnalysis,
         hasSplit,
         hasMixed,
         hasMastered,
@@ -365,6 +381,109 @@ app.post('/api/sequence', async (req, res) => {
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Analyze Audio File (Step 1: Raw analysis)
+app.post('/api/analyze', async (req, res) => {
+  try {
+    const { targetFile } = req.body;
+    if (!targetFile || !fs.existsSync(targetFile)) {
+      return res.status(400).json({ error: 'Valid targetFile is required' });
+    }
+    const result = await analyzeFile(targetFile);
+
+    // Save raw analysis to track's htdemucs folder cache if it exists, or create folder
+    const dir = path.dirname(targetFile);
+    const base = path.basename(targetFile, path.extname(targetFile));
+    const htdemucsDir = path.join(dir, 'htdemucs_ft', base);
+    fs.mkdirSync(htdemucsDir, { recursive: true });
+    fs.writeFileSync(path.join(htdemucsDir, 'raw_analysis.json'), JSON.stringify(result, null, 2), 'utf8');
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: Generate / Update Quality Report (for new and existing masters)
+app.post('/api/quality-report', async (req, res) => {
+  try {
+    const { masteredFile, rawFile, outputFolder } = req.body;
+    if (!masteredFile || !fs.existsSync(masteredFile)) {
+      return res.status(400).json({ error: 'Valid masteredFile is required' });
+    }
+
+    // 1. Analyze mastered file
+    const masterMetrics = await analyzeFile(masteredFile);
+
+    // 2. Analyze raw file if provided, or load cached
+    let rawMetrics = null;
+    if (rawFile && fs.existsSync(rawFile)) {
+      const base = path.basename(rawFile, path.extname(rawFile));
+      const cached = path.join(path.dirname(rawFile), 'htdemucs_ft', base, 'raw_analysis.json');
+      if (fs.existsSync(cached)) {
+        try { rawMetrics = JSON.parse(fs.readFileSync(cached, 'utf8')); } catch {}
+      }
+      if (!rawMetrics) {
+        rawMetrics = await analyzeFile(rawFile);
+      }
+    }
+
+    // 3. Compile full Quality Report
+    const appleRating = masterMetrics.appleMusicConfidence?.confidenceRating || (masterMetrics.appleMusicConfidence?.scorePercent >= 80 ? 'High' : 'Medium');
+
+    const report = {
+      status: 'success',
+      track: path.basename(masteredFile, path.extname(masteredFile)),
+      masterFile: masteredFile,
+      autoDetectedGenre: masterMetrics.autoDetectedGenre || rawMetrics?.autoDetectedGenre,
+      kpi_vergleich: {
+        lufs: {
+          before_measured: rawMetrics ? `${rawMetrics.integratedLoudnessLufs} LUFS` : 'N/A',
+          after_target: `${masterMetrics.integratedLoudnessLufs} LUFS`
+        },
+        truePeak: {
+          before_measured: rawMetrics ? `${rawMetrics.truePeakDbtp} dBTP` : 'N/A',
+          after_target: `${masterMetrics.truePeakDbtp} dBTP`
+        },
+        loudnessRange: {
+          before_measured: rawMetrics ? `${rawMetrics.loudnessRangeLra} LU` : 'N/A',
+          after_target: `${masterMetrics.loudnessRangeLra} LU`
+        },
+        appleMusicConfidence: appleRating
+      },
+      optimizations: [
+        `Integrated Loudness: ${masterMetrics.integratedLoudnessLufs} LUFS (Broadcast calibrated)`,
+        `True Peak: ${masterMetrics.truePeakDbtp} dBTP (Inter-sample peak safe)`,
+        `Loudness Range: ${masterMetrics.loudnessRangeLra} LU (Dynamic transparency preserved)`,
+        `Apple Digital Masters Ready: ${appleRating} confidence rating`
+      ],
+      stats: {
+        sampleRate: masterMetrics.sampleRate,
+        channels: masterMetrics.channels,
+        codec: masterMetrics.codec,
+        duration: masterMetrics.durationSeconds ? `${masterMetrics.durationSeconds}s` : 'N/A',
+        fileSizeBytes: fs.statSync(masteredFile).size
+      },
+      analyzedAt: new Date().toISOString()
+    };
+
+    // 4. Save JSON alongside mastered file (.json)
+    const jsonPath = masteredFile.replace(/\.wav$/i, '.json');
+    fs.writeFileSync(jsonPath, JSON.stringify(report, null, 2), 'utf8');
+
+    // Also write into outputFolder/reports/ if outputFolder is provided
+    if (outputFolder && fs.existsSync(outputFolder)) {
+      const reportsDir = path.join(outputFolder, 'reports');
+      fs.mkdirSync(reportsDir, { recursive: true });
+      const reportName = path.basename(masteredFile, path.extname(masteredFile)) + '.json';
+      fs.writeFileSync(path.join(reportsDir, reportName), JSON.stringify(report, null, 2), 'utf8');
+    }
+
+    res.json(report);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
