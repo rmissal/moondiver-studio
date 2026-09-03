@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: Run Unit Tests
+    name: Run Unit Tests & Coverage
     runs-on: ubuntu-latest
 
     steps:
@@ -24,5 +24,36 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run Vitest Suite
-        run: npm test
+      - name: Run Tests with V8 Coverage
+        run: npm run test:coverage
+
+      - name: Publish Coverage to GitHub Step Summary
+        if: always()
+        run: |
+          node -e "
+            const fs = require('fs');
+            if (fs.existsSync('coverage/coverage-summary.json')) {
+              const summary = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+              let md = '### 📊 Test Coverage Summary\n\n';
+              md += '| Target | Statements | Branches | Functions | Lines |\n';
+              md += '|:---|:---:|:---:|:---:|:---:|\n';
+              for (const [file, data] of Object.entries(summary)) {
+                const name = file === 'total' ? '**Total**' : file.split(/[\/\\\\]/).pop();
+                md += \`| \${name} | \${data.statements.pct}% | \${data.branches.pct}% | \${data.functions.pct}% | \${data.lines.pct}% |\n\`;
+              }
+              const summaryFile = process.env.GITHUB_STEP_SUMMARY;
+              if (summaryFile) {
+                fs.appendFileSync(summaryFile, md);
+              } else {
+                console.log(md);
+              }
+            }
+          "
+
+      - name: Upload Coverage Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
