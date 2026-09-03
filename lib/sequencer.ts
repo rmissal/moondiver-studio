@@ -482,8 +482,4 @@ export async function sequenceAlbum(targetPath, options = {}) {
   };
 }
 
-module.exports = {
-  calculateTrackEnergy,
-  sequenceAlbumTracks,
-  sequenceAlbum
-};
+

@@ -370,8 +370,4 @@ export function resolveAudioFiles(targetPath) {
   };
 }
 
-module.exports = {
-  detectGenre,
-  analyzeFile,
-  resolveAudioFiles
-};
+

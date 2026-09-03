@@ -6,9 +6,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { PRESETS } from './presets';
-const { buildFilterChain } = require('./dsp');
+import { buildFilterChain } from './dsp';
 import { findLocalFfmpeg, runCommand, embedStudioMetadata } from './metadata';
-const { analyzeFile, resolveAudioFiles } = require('./analyzer');
+import { analyzeFile, resolveAudioFiles } from './analyzer';
 import { calculateAppleMusicScore } from './apple-music';
 
 // Master a single audio file with two-pass calibrated EBU R128 processing
@@ -317,7 +317,7 @@ export async function masterSingleFile(inputFile, options = {}) {
 }
 
 // Master single file or entire directory
-async function masterAudio(targetPath, options = {}) {
+export async function masterAudio(targetPath, options = {}) {
   const { isSingleFile, files } = resolveAudioFiles(targetPath);
   const results = [];
 
@@ -341,7 +341,4 @@ async function masterAudio(targetPath, options = {}) {
   };
 }
 
-module.exports = {
-  masterSingleFile,
-  masterAudio
-};
+

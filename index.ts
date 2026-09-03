@@ -5,11 +5,11 @@
  */
 
 import { PRESETS } from './lib/presets';
-const { analyzeFile, resolveAudioFiles } = require('./lib/analyzer');
-const { masterAudio } = require('./lib/masterer');
-const { sequenceAlbum } = require('./lib/sequencer');
+import { analyzeFile, resolveAudioFiles } from './lib/analyzer';
+import { batchMaster as masterAudio } from './lib/masterer';
+import { sequenceAlbum } from './lib/sequencer';
 import { upscaleCoverArt } from './lib/cover_art';
-const { mixStems } = require('./lib/mixer');
+import { mixStems } from './lib/mixer';
 
 const TOOLS = [
   {

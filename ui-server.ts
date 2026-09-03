@@ -1,13 +1,16 @@
 ﻿import express from 'express';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import * as path from 'path';
-const { masterAudio } = require('./lib/masterer');
-const { sequenceAlbum } = require('./lib/sequencer');
-const { mixStems } = require('./lib/mixer');
+import { masterAudio } from './lib/masterer';
+import { sequenceAlbum } from './lib/sequencer';
+import { mixStems } from './lib/mixer';
 import { PRESETS } from './lib/presets';
 import { analyzeFile } from './lib/analyzer';
-const { spawn } = require('child_process');
+import { spawn } from 'child_process';
 import * as fs from 'fs';
-const os = require('os');
+import * as os from 'os';
 
 const app = express();
 const PORT = 3000;
@@ -441,7 +444,7 @@ function getCpuUsage() {
 app.get('/api/system-stats', (req, res) => {
   const usage = getCpuUsage();
 
-  const { exec } = require('child_process');
+  
   exec('nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits', (err, stdout) => {
     let gpu = 0;
     if (!err && stdout) {
