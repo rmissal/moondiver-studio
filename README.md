@@ -80,7 +80,7 @@ In `~/.gemini/config/mcp_config.json` registriert:
   "mcpServers": {
     "audio-mastering": {
       "command": "node",
-      "args": ["e:/Music Projects/mastering_tools/mcp-mastering/index.js"]
+      "args": ["e:/workspaces/Moondiver-Studio/index.js"]
     }
   }
 }
