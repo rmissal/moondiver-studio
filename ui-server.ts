@@ -8,7 +8,7 @@ import { sequenceAlbum } from './lib/sequencer';
 import { mixStems } from './lib/mixer';
 import { PRESETS } from './lib/presets';
 import { analyzeFile } from './lib/analyzer';
-import { spawn } from 'child_process';
+import { spawn, exec } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 
