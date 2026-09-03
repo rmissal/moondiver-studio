@@ -509,7 +509,7 @@
                     </div>
                   </template>
                   <template x-if="!track.isProcessing && !track.hasMastered">
-                    <button @click="runRowAction('master', track)" :disabled="!isReadyToProcess() || (!track.hasMixed && !track.hasSplit)" class="text-xs bg-gray-700 hover:bg-emerald-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed border border-emerald-500/30" title="Execute Two-Pass Linear Mastering into selected output folder">Master</button>
+                    <button @click="runRowAction('master', track)" :disabled="!isReadyToProcess()" class="text-xs bg-gray-700 hover:bg-emerald-600 text-white py-1 px-3 rounded shadow transition disabled:opacity-40 disabled:cursor-not-allowed border border-emerald-500/30" title="Execute Two-Pass Linear Mastering into selected output folder">Master</button>
                   </template>
                 </td>
 
