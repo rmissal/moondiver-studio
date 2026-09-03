@@ -620,7 +620,6 @@ app.post('/api/quality-report', async (req, res) => {
     };
 
     // 4. Save JSON alongside mastered file (.json)
-    const jsonPath = resolvedMasteredFile.replace(/\.wav$/i, '.json');
     fs.writeFileSync(jsonPath, JSON.stringify(report, null, 2), 'utf8');
 
     // Also write into outputFolder/reports/ if outputFolder is provided
