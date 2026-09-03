@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/Moondiver_Logo.jpg" alt="Moondiver Studio Logo" width="220" style="border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+</p>
+
 # Moondiver Studio & Audio Mastering MCP Server
 
 [![CI](https://github.com/rmissal/moondiver-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/rmissal/moondiver-studio/actions/workflows/ci.yml)

@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Moondiver Mastering</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="128x128" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
@@ -18,8 +21,22 @@
     @error="handleAudioError($event)"
   ></audio>
 
-  <!-- Floating Glassmorphic Hardware & Master Playback HUD (Always Visible on Scroll) -->
-  <div class="fixed top-4 right-4 sm:right-8 z-50 flex items-center gap-3 bg-[#0a0f1d]/95 px-4 py-2 rounded-2xl border border-gray-700/80 backdrop-blur-2xl shadow-2xl transition-all duration-300">
+  <!-- Floating Glassmorphic Hardware, Playback & Processing HUD (Always Visible on Scroll) -->
+  <div class="fixed top-4 right-4 sm:right-8 z-50 flex items-center gap-3 bg-[#0a0f1d]/95 px-4 py-2 rounded-2xl backdrop-blur-2xl shadow-2xl transition-all duration-300 border"
+    :class="loading ? 'border-cyan-400/80 shadow-cyan-500/20 ring-1 ring-cyan-400/40' : 'border-gray-700/80'">
+
+    <!-- Real-Time Processing Status Indicator (Always Visible) -->
+    <template x-if="loading">
+      <div class="flex items-center gap-2 bg-gradient-to-r from-cyan-950/90 to-blue-950/90 border border-cyan-400/60 px-2.5 py-1 rounded-xl shadow-lg animate-pulse" title="System is processing audio tasks">
+        <svg class="animate-spin h-3.5 w-3.5 text-cyan-400 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+        <span class="text-xs font-bold text-cyan-300 tracking-wide whitespace-nowrap">Processing audio...</span>
+      </div>
+    </template>
+
+    <template x-if="loading">
+      <div class="h-4 w-[1px] bg-cyan-700/60"></div>
+    </template>
+
     <!-- CPU Monitoring -->
     <div class="flex items-center gap-1.5" title="Real-time CPU Utilization">
       <span class="text-[10px] text-cyan-400 font-bold tracking-wider uppercase">CPU</span>
@@ -105,10 +122,14 @@
   </div>
 
   <div class="max-w-7xl mx-auto relative z-10 pt-2">
-    <!-- Header -->
-    <header class="mb-6">
+    <!-- Header with Moondiver Logo -->
+    <header class="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+      <div class="relative group shrink-0">
+        <div class="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-2xl blur opacity-60 group-hover:opacity-100 transition duration-500"></div>
+        <img src="/Moondiver_Logo.jpg" alt="Moondiver Studio Logo" class="relative w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-2xl border border-cyan-500/50 shadow-2xl">
+      </div>
       <div class="text-left">
-        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 pb-1">
+        <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 pb-1">
           Moondiver Mastering
         </h1>
         <p class="text-gray-400 mt-1 text-sm md:text-base font-light tracking-wide">Automated Stem Separation, Analog Warmth Mixing, Two-Pass Linear Mastering & Album Sequencing</p>
