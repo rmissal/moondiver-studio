@@ -4,6 +4,11 @@ const { PRESETS } = require('../lib/presets');
 describe('Mastering Presets Library Tests', () => {
   const requiredPresets = [
     'auto',
+    'chillout_lounge',
+    'nu_jazz_lounge',
+    'jazz_acoustic',
+    'easy_listening',
+    'melodic_dance_club',
     'new_age_ambient',
     'cinematic_orchestral',
     'acoustic_instrumental',
