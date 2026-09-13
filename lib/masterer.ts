@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Two-Pass Adaptive DSP Linear Mastering Engine
  * Apple Digital Masters & EBU R128 Compliant Two-Pass Mastering
  */
@@ -340,3 +340,5 @@ export async function masterAudio(targetPath, options = {}) {
     processedTracks: results
   };
 }
+
+export { masterAudio as batchMaster };

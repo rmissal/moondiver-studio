@@ -1,4 +1,4 @@
-﻿@echo off
+@echo off
 chcp 65001 >nul
 title Moondiver Studio
 
@@ -42,8 +42,7 @@ echo.
 :: Open browser after 2 seconds in the background
 start "" cmd /c "timeout /t 2 /nobreak >nul & start http://localhost:3000"
 
-:: Start the server. Redirecting stdin from nul skips the 'Terminate batch job' prompt on Ctrl+C.
-npx tsx ui-server.ts < nul
+call npm run ui
 
 :: Reset ANSI on exit
 echo %ESC%[0m

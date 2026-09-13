@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -698,3 +698,6 @@ app.post('/api/quality-report', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Moondiver Studio Dashboard runs on http://localhost:${PORT}`);
 });
+
+// Keep process alive
+setInterval(() => {}, 10000);

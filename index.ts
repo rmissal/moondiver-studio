@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * Audio Mastering MCP Server
  * Model Context Protocol integration for DSP Mastering
@@ -6,7 +6,7 @@
 
 import { PRESETS } from './lib/presets';
 import { analyzeFile, resolveAudioFiles } from './lib/analyzer';
-import { batchMaster as masterAudio } from './lib/masterer';
+import { masterAudio } from './lib/masterer';
 import { sequenceAlbum } from './lib/sequencer';
 import { upscaleCoverArt } from './lib/cover_art';
 import { mixStems } from './lib/mixer';
