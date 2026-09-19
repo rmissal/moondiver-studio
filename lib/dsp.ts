@@ -37,6 +37,8 @@ export function buildFilterChain(options: any = {}, measured: any = null, bounda
   }
 
   const filters: string[] = [];
+  const autoBassMono = options.bassMono !== undefined ? options.bassMono : false;
+  const useExciter = options.useExciter !== undefined ? options.useExciter : false;
 
   // 1. Time-Calibrated Acoustic Boundary Trim
   // Removes excessive digital lead-in while preserving a safe 150ms pre-roll buffer, and keeps full natural tail decay
@@ -68,18 +70,27 @@ export function buildFilterChain(options: any = {}, measured: any = null, bounda
     filters.push(`bass=g=${bassGainDb}:f=${base.bassFreq || 80}:w=0.6`);
   }
 
-  // 5. Midrange Clarity (Gentle de-mudding)
+  // M/S Bass Monomaker (Reduces phase issues in heavy sub-bass)
+  if (autoBassMono) {
+    // A simplified proxy for bass mono in linear chain: use stereotools to narrow stereo width slightly if bass is heavy
+    filters.push(`stereotools=slev=0.85:mlev=1.0`);
+  }
+
+  // 5. Adaptive Midrange Clarity (De-mudding)
   if (midDeMudGainDb && midDeMudGainDb !== 0) {
     filters.push(`equalizer=f=${base.midDeMudFreq || 320}:t=q:w=1.0:g=${midDeMudGainDb}`);
   }
 
-  // 6. Silky Treble Air (Smooth high-end sheen)
-  if (airTrebleGainDb && airTrebleGainDb !== 0) {
+  // 6. Psychoacoustic Harmonic Exciter (Air Sheen)
+  if (useExciter) {
+    filters.push(`aexciter=level_in=1:level_out=1:amount=0.8:freq=8000`);
+  } else if (airTrebleGainDb && airTrebleGainDb !== 0) {
+    // Fallback to standard treble shelf if exciter not requested
     filters.push(`treble=g=${airTrebleGainDb}:f=${base.airTrebleFreq || 11000}:w=0.5`);
   }
 
   // 7. Spatial Stereo Width (Expansive soundstage without phase cancellation)
-  if (stereoWidth && stereoWidth !== 1.0 && stereoWidth <= 1.1) {
+  if (!autoBassMono && stereoWidth && stereoWidth !== 1.0 && stereoWidth <= 1.1) {
     filters.push(`stereotools=slev=${stereoWidth}:mlev=1.0`);
   }
 
