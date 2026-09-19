@@ -408,49 +408,67 @@ export async function analyzeFile(filePath) {
 export async function detectSpectralDNA(filePath, duration) {
   const ffmpegBin = findLocalFfmpeg();
   // We analyze the middle 30 seconds (or less if track is short) to find the 'meat' of the frequency spectrum
-  const startOffset = Math.max(0, (duration / 2) - 15);
+  const startOffset = Math.max(0, duration / 2 - 15);
   const tDuration = Math.min(duration, 30);
-  
+
   const args = [
-    '-v', 'info',
-    '-ss', startOffset.toFixed(2),
-    '-t', tDuration.toFixed(2),
-    '-i', filePath,
+    '-v',
+    'info',
+    '-ss',
+    startOffset.toFixed(2),
+    '-t',
+    tDuration.toFixed(2),
+    '-i',
+    filePath,
     '-filter_complex',
     '[0:a]lowpass=f=120,volumedetect[bass];[0:a]bandpass=f=350:width_type=q:w=0.5,volumedetect[mud];[0:a]highpass=f=8000,volumedetect[treble]',
-    '-map', '[bass]', '-f', 'null', '-',
-    '-map', '[mud]', '-f', 'null', '-',
-    '-map', '[treble]', '-f', 'null', '-'
+    '-map',
+    '[bass]',
+    '-f',
+    'null',
+    '-',
+    '-map',
+    '[mud]',
+    '-f',
+    'null',
+    '-',
+    '-map',
+    '[treble]',
+    '-f',
+    'null',
+    '-'
   ];
 
-  let bassMean = -50, mudMean = -50, trebleMean = -50;
-  
+  let bassMean = -50,
+    mudMean = -50,
+    trebleMean = -50;
+
   try {
     const res = await runCommand(ffmpegBin, args);
     const stderr = res.stderr || '';
-    
+
     // We expect three volumedetect outputs in stderr. They will appear in order (or we can just match all mean_volume)
     // Actually ffmpeg runs the filtergraph and prints volumedetect for each mapped stream.
     const meanMatches = [...stderr.matchAll(/mean_volume:\s*([\-\d.]+)/g)];
-    
+
     if (meanMatches.length >= 3) {
-       bassMean = parseFloat(meanMatches[0][1]);
-       mudMean = parseFloat(meanMatches[1][1]);
-       trebleMean = parseFloat(meanMatches[2][1]);
+      bassMean = parseFloat(meanMatches[0][1]);
+      mudMean = parseFloat(meanMatches[1][1]);
+      trebleMean = parseFloat(meanMatches[2][1]);
     }
-  } catch(e) {
-    console.error("Spectral DNA detection failed:", e);
+  } catch (e) {
+    console.error('Spectral DNA detection failed:', e);
   }
 
   // Calculate Relative Energies (Tilt)
   // Higher negative dB = quieter.
-  const mudEnergyLevel = mudMean; 
+  const mudEnergyLevel = mudMean;
   const bassEnergyLevel = bassMean;
   const trebleEnergyLevel = trebleMean;
 
   // Derive autonomous decisions:
   // Mud: If mud band is too loud relative to bass. (Usually mud is -20dB to -30dB)
-  const isMuddy = mudEnergyLevel > -22; 
+  const isMuddy = mudEnergyLevel > -22;
   // Air: If treble is very quiet (e.g., < -35dB)
   const needsAir = trebleEnergyLevel < -30;
   // Bass: If bass is very loud (could cause phase issues when stereo)

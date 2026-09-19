@@ -32,13 +32,14 @@ export async function masterSingleFile(inputFile, options = {}) {
 
   if (isAuto && initialAnalysis.spectralDNA) {
     if (effectiveOptions.midDeMudGainDb === undefined && initialAnalysis.spectralDNA.autonomousDeMudDb !== 0) {
-       effectiveOptions.midDeMudGainDb = (PRESETS[effectivePresetKey]?.midDeMudGainDb || 0) + initialAnalysis.spectralDNA.autonomousDeMudDb;
+      effectiveOptions.midDeMudGainDb =
+        (PRESETS[effectivePresetKey]?.midDeMudGainDb || 0) + initialAnalysis.spectralDNA.autonomousDeMudDb;
     }
     if (effectiveOptions.useExciter === undefined && initialAnalysis.spectralDNA.needsAir) {
-       effectiveOptions.useExciter = true;
+      effectiveOptions.useExciter = true;
     }
     if (effectiveOptions.bassMono === undefined && initialAnalysis.spectralDNA.needsBassMonomaker) {
-       effectiveOptions.bassMono = true;
+      effectiveOptions.bassMono = true;
     }
   }
 
@@ -294,12 +295,20 @@ export async function masterSingleFile(inputFile, options = {}) {
       `Loudness Range: ${finalMasterMetrics.loudnessRangeLra} LU (Dynamic transparency preserved)`,
       `Acoustic Boundary Calibration: 150ms lead-in pre-roll (audible start at ${initialAnalysis.boundaries?.audibleStart || 0}s)`,
       `Natural Reverb Tail Decay: Smooth musical fade-out + 0.50s clean pause padding`,
-      ...(isAuto && initialAnalysis.spectralDNA ? [
-        `Autonomous Spectral DNA: Bass ${initialAnalysis.spectralDNA.bassMeanDb}dB | Mud ${initialAnalysis.spectralDNA.mudMeanDb}dB | Treble ${initialAnalysis.spectralDNA.trebleMeanDb}dB`,
-        ...(initialAnalysis.spectralDNA.needsBassMonomaker ? ['Autonomous Action: Applied M/S Bass Monomaker'] : []),
-        ...(initialAnalysis.spectralDNA.autonomousDeMudDb !== 0 ? [`Autonomous Action: Adaptive De-Mudding (${initialAnalysis.spectralDNA.autonomousDeMudDb}dB)`] : []),
-        ...(initialAnalysis.spectralDNA.needsAir ? ['Autonomous Action: Psychoacoustic Harmonic Exciter (Air Sheen) applied'] : [])
-      ] : []),
+      ...(isAuto && initialAnalysis.spectralDNA
+        ? [
+            `Autonomous Spectral DNA: Bass ${initialAnalysis.spectralDNA.bassMeanDb}dB | Mud ${initialAnalysis.spectralDNA.mudMeanDb}dB | Treble ${initialAnalysis.spectralDNA.trebleMeanDb}dB`,
+            ...(initialAnalysis.spectralDNA.needsBassMonomaker
+              ? ['Autonomous Action: Applied M/S Bass Monomaker']
+              : []),
+            ...(initialAnalysis.spectralDNA.autonomousDeMudDb !== 0
+              ? [`Autonomous Action: Adaptive De-Mudding (${initialAnalysis.spectralDNA.autonomousDeMudDb}dB)`]
+              : []),
+            ...(initialAnalysis.spectralDNA.needsAir
+              ? ['Autonomous Action: Psychoacoustic Harmonic Exciter (Air Sheen) applied']
+              : [])
+          ]
+        : []),
       `Apple Digital Masters Ready: ${appleRating} confidence rating`
     ],
 
