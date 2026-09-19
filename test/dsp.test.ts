@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { buildFilterChain } from '../lib/dsp';
 import { PRESETS } from '../lib/presets';
 
@@ -11,7 +11,7 @@ describe('DSP Filter Chain Builder Tests', () => {
     expect(pass1.filterString).toContain('print_format=json');
   });
 
-  it('Should build a valid PASS 2 mastering string with preset EQs', () => {
+  it('Should build a valid PASS 2 mastering string with preset EQs, fade-out, and pause padding', () => {
     const measured = {
       input_i: -20,
       input_tp: -2.5,
@@ -19,13 +19,25 @@ describe('DSP Filter Chain Builder Tests', () => {
       input_thresh: -30,
       target_offset: 2.5
     };
-    const pass2 = buildFilterChain({ preset: 'new_age_ambient' }, measured, 120);
+    const boundaries = {
+      audibleStart: 0.6,
+      audibleEnd: 118.5,
+      totalDuration: 120.0,
+      trimStart: 0.45,
+      trimEnd: 118.8,
+      activeDuration: 118.35
+    };
+    const pass2 = buildFilterChain({ preset: 'new_age_ambient' }, measured, boundaries);
 
     // Should include linear true in pass 2 loudnorm
     expect(pass2.filterString).toContain('linear=true');
     expect(pass2.filterString).toContain('measured_I=-20');
-    // Should include a fade out (areverse is used for tail fadeout)
-    expect(pass2.filterString).toContain('areverse');
+    // Should include boundary trim
+    expect(pass2.filterString).toContain('atrim=start=0.450:end=118.800');
+    // Should include natural fade out
+    expect(pass2.filterString).toContain('afade=t=out:st=');
+    // Should include clean 0.5s pause padding
+    expect(pass2.filterString).toContain('apad=pad_dur=0.50');
   });
 
   it('Should fall back to new_age_ambient if unknown preset is used', () => {

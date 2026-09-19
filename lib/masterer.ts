@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Two-Pass Adaptive DSP Linear Mastering Engine
  * Apple Digital Masters & EBU R128 Compliant Two-Pass Mastering
  */
@@ -30,11 +30,11 @@ export async function masterSingleFile(inputFile, options = {}) {
 
   const effectiveOptions = { ...options, preset: effectivePresetKey };
 
-  const pass1 = buildFilterChain(effectiveOptions);
+  const pass1 = buildFilterChain(effectiveOptions, null, initialAnalysis.boundaries);
   const pass1Args = ['-v', 'info', '-i', inputFile, '-af', pass1.filterString, '-f', 'null', '-'];
 
   const p1Res = await runCommand(ffmpegBin, pass1Args);
-  let measured = {};
+  let measured: any = {};
   const jsonMatch = p1Res.stderr.match(/\{[\s\r\n]*"input_i"[\s\S]*?"target_offset"[\s\S]*?\}/);
   if (jsonMatch) {
     try {
@@ -52,7 +52,7 @@ export async function masterSingleFile(inputFile, options = {}) {
   }
 
   // 2. Build Pass 2 Linear Calibrated Filter Graph
-  const pass2 = buildFilterChain(effectiveOptions, measured);
+  const pass2 = buildFilterChain(effectiveOptions, measured, initialAnalysis.boundaries);
 
   // Setup Output Directories
   const inputDir = path.dirname(inputFile);
@@ -280,9 +280,12 @@ export async function masterSingleFile(inputFile, options = {}) {
       `Measured Loudness: ${finalMasterMetrics.integratedLoudnessLufs} LUFS (Target: ${pass2.settings.targetLufs} LUFS)`,
       `Measured True Peak: ${finalMasterMetrics.truePeakDbtp} dBTP (Ceiling: ${pass2.settings.truePeak} dBTP)`,
       `Loudness Range: ${finalMasterMetrics.loudnessRangeLra} LU (Dynamic transparency preserved)`,
+      `Acoustic Boundary Calibration: 150ms lead-in pre-roll (audible start at ${initialAnalysis.boundaries?.audibleStart || 0}s)`,
+      `Natural Reverb Tail Decay: Smooth musical fade-out + 0.50s clean pause padding`,
       `Apple Digital Masters Ready: ${appleRating} confidence rating`
     ],
 
+    boundaries: initialAnalysis.boundaries,
     appleMusicConfidence: appleScoreObj,
 
     // FILE STATISTICS
@@ -340,3 +343,5 @@ export async function masterAudio(targetPath, options = {}) {
     processedTracks: results
   };
 }
+
+export { masterAudio as batchMaster };

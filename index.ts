@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * Audio Mastering MCP Server
  * Model Context Protocol integration for DSP Mastering
@@ -6,7 +6,7 @@
 
 import { PRESETS } from './lib/presets';
 import { analyzeFile, resolveAudioFiles } from './lib/analyzer';
-import { batchMaster as masterAudio } from './lib/masterer';
+import { masterAudio } from './lib/masterer';
 import { sequenceAlbum } from './lib/sequencer';
 import { upscaleCoverArt } from './lib/cover_art';
 import { mixStems } from './lib/mixer';
@@ -148,14 +148,24 @@ const TOOLS = [
           type: 'string',
           description: 'Bitrate for exported MP3 files (default: "320k").'
         },
+        autoTrim: {
+          type: 'boolean',
+          description:
+            'Automatically calibrate audible boundaries (keep 150ms lead-in buffer and clean 0.5s pause padding) (default: true).'
+        },
+        pauseDurationSecs: {
+          type: 'number',
+          description:
+            'Duration in seconds of clean digital silence pause appended at the end of the track (default: 0.5).'
+        },
         autoFadeIn: {
           type: 'boolean',
-          description: 'Apply 40ms anti-click micro fade-in to eliminate DC-offset and initial pops (default: true).'
+          description: 'Apply 30ms anti-click micro fade-in to eliminate DC-offset and initial pops (default: true).'
         },
         autoFadeOut: {
           type: 'boolean',
           description:
-            'Apply smooth exponential reverb-tail fade-out to prevent abrupt track end truncation (default: true).'
+            'Apply smooth natural reverb-tail fade-out to prevent abrupt track end truncation (default: true).'
         },
         artist: {
           type: 'string',
