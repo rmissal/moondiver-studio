@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Acoustic Analyzer & Genre Classifier Engine
  * Measures integrated LUFS, True Peak, LRA, Spectral DNA, and Apple Music Readiness
  */
@@ -258,6 +258,58 @@ export function detectGenre(arg1 = {}, arg2 = {}, arg3 = '') {
   };
 }
 
+// Detect exact audible start and end boundaries to protect pre-roll transients and reverb tail decay
+export async function detectAudibleBoundaries(filePath, totalDuration = 0) {
+  const ffmpegBin = findLocalFfmpeg();
+  const silenceArgs = ['-v', 'info', '-i', filePath, '-af', 'silencedetect=noise=-55dB:d=0.15', '-f', 'null', '-'];
+
+  let audibleStart = 0;
+  let audibleEnd = totalDuration;
+
+  try {
+    const res = await runCommand(ffmpegBin, silenceArgs);
+    const stderr = res.stderr || '';
+
+    const startMatches = [...stderr.matchAll(/silence_end:\s*([\d.]+)/g)];
+    const endMatches = [...stderr.matchAll(/silence_start:\s*([\d.]+)/g)];
+
+    if (startMatches.length > 0) {
+      const firstEnd = parseFloat(startMatches[0][1]);
+      if (firstEnd < 5.0 && firstEnd > 0.04) {
+        audibleStart = firstEnd;
+      }
+    }
+
+    if (endMatches.length > 0) {
+      const lastStart = parseFloat(endMatches[endMatches.length - 1][1]);
+      if (totalDuration > 0 ? lastStart > totalDuration * 0.7 : lastStart > 5.0) {
+        audibleEnd = lastStart;
+      }
+    }
+  } catch (_e) {}
+
+  // Safe buffer margins:
+  // 150ms lead-in buffer before first audible note (Apple Music <500ms compliant, zero clipped attack)
+  const leadBuffer = 0.15;
+  const trimStart = Math.max(0, audibleStart - leadBuffer);
+
+  // 300ms tail decay buffer after music drops to noise floor (never cut delicate reverb trails)
+  const tailBuffer = 0.3;
+  const trimEnd = totalDuration > 0 ? Math.min(totalDuration, audibleEnd + tailBuffer) : audibleEnd + tailBuffer;
+  const activeDuration = Math.max(0.1, trimEnd - trimStart);
+
+  return {
+    audibleStart: parseFloat(audibleStart.toFixed(3)),
+    audibleEnd: parseFloat(audibleEnd.toFixed(3)),
+    totalDuration: parseFloat((totalDuration || 0).toFixed(3)),
+    leadSilenceDuration: parseFloat(audibleStart.toFixed(3)),
+    tailSilenceDuration: parseFloat(Math.max(0, (totalDuration || audibleEnd) - audibleEnd).toFixed(3)),
+    trimStart: parseFloat(trimStart.toFixed(3)),
+    trimEnd: parseFloat(trimEnd.toFixed(3)),
+    activeDuration: parseFloat(activeDuration.toFixed(3))
+  };
+}
+
 // Analyze audio loudness, metadata, auto-detected genre and Apple Music Compliance
 export async function analyzeFile(filePath) {
   const ffmpegBin = findLocalFfmpeg();
@@ -290,6 +342,9 @@ export async function analyzeFile(filePath) {
       codecName = info.streams[0].codec_name || 'pcm_s24le';
     }
   } catch (_e) {}
+
+  // Detect accurate audible boundaries (start/end silence, lead buffer, tail decay)
+  const boundaries = await detectAudibleBoundaries(filePath, duration);
 
   // Run EBU R128 Pass 1 Loudness Analysis
   const ebuArgs = ['-v', 'info', '-i', filePath, '-af', 'loudnorm=print_format=json', '-f', 'null', '-'];
@@ -326,7 +381,8 @@ export async function analyzeFile(filePath) {
     truePeakDbtp: truePeakDbtp,
     loudnessRangeLra: loudnessRangeLra,
     threshold: threshold,
-    metadataTags: tags
+    metadataTags: tags,
+    boundaries
   };
 
   rawAnalysis.autoDetectedGenre = detectGenre(

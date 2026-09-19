@@ -1,12 +1,13 @@
-﻿/**
+/**
  * DSP Filter Graph Engine
  * Builds Two-Pass Calibrated EBU R128 Loudness Normalization, EQ, Tape Warmth,
- * Auto-Lead-Trim (Apple Music <500ms Compliance), Anti-Click Fade-In, and Reverb-Tail Fade-Out
+ * Audible Boundary Calibration (Apple Music <500ms Lead Compliance), Anti-Click Micro Fade-In,
+ * Gentle Tail Fade-Out, and Clean 0.5s Pause Padding.
  */
 
 import { PRESETS } from './presets';
 
-export function buildFilterChain(options = {}, measured = null, duration = null) {
+export function buildFilterChain(options: any = {}, measured: any = null, boundariesOrDuration: any = null) {
   const presetKey = options.preset || 'new_age_ambient';
   const base = PRESETS[presetKey] || PRESETS.new_age_ambient;
 
@@ -20,18 +21,39 @@ export function buildFilterChain(options = {}, measured = null, duration = null)
   const bassGainDb = options.bassGainDb !== undefined ? options.bassGainDb : base.bassGainDb;
   const midDeMudGainDb = options.midDeMudGainDb !== undefined ? options.midDeMudGainDb : base.midDeMudGainDb;
   const airTrebleGainDb = options.airTrebleGainDb !== undefined ? options.airTrebleGainDb : base.airTrebleGainDb;
-  const autoTrim = options.autoTrim !== false; // Default: true (Gentle lead silence trim for Apple Music compliance)
+  const autoTrim = options.autoTrim !== false; // Default: true (Acoustic lead & tail boundary trim)
   const autoFadeIn = options.autoFadeIn !== false; // Default: true (30ms anti-click micro fade-in)
-  const autoFadeOut = options.autoFadeOut !== false; // Default: true (smooth reverb tail fade-out)
+  const autoFadeOut = options.autoFadeOut !== false; // Default: true (gentle reverb tail fade-out)
+  const pauseDurationSecs = options.pauseDurationSecs !== undefined ? options.pauseDurationSecs : 0.5; // 0.5s pause
 
-  const filters = [];
-
-  // 1. Auto-Lead Silence Trim (Safe -70dB threshold removes digital pre-roll silence without clipping quiet musical intros)
-  if (autoTrim) {
-    filters.push('silenceremove=start_periods=1:start_duration=0.1:start_threshold=-70dB');
+  // Normalize boundaries or duration
+  let boundaries: any = null;
+  let totalDuration: number | null = null;
+  if (boundariesOrDuration && typeof boundariesOrDuration === 'object') {
+    boundaries = boundariesOrDuration;
+    totalDuration = boundaries.totalDuration || null;
+  } else if (typeof boundariesOrDuration === 'number') {
+    totalDuration = boundariesOrDuration;
   }
 
-  // 2. Anti-Click & DC-Pop Micro Fade-In (Eliminates clicks & DC impulse at t=0)
+  const filters: string[] = [];
+
+  // 1. Time-Calibrated Acoustic Boundary Trim
+  // Removes excessive digital lead-in while preserving a safe 150ms pre-roll buffer, and keeps full natural tail decay
+  if (
+    autoTrim &&
+    boundaries &&
+    typeof boundaries.trimStart === 'number' &&
+    typeof boundaries.trimEnd === 'number' &&
+    boundaries.trimEnd > boundaries.trimStart
+  ) {
+    filters.push(
+      `atrim=start=${boundaries.trimStart.toFixed(3)}:end=${boundaries.trimEnd.toFixed(3)}`,
+      'asetpts=PTS-STARTPTS'
+    );
+  }
+
+  // 2. Anti-Click & DC-Pop Micro Fade-In (30ms smooth qsin curve at the start of audio)
   if (autoFadeIn) {
     filters.push('afade=t=in:ss=0:d=0.03:curve=qsin');
   }
@@ -71,12 +93,20 @@ export function buildFilterChain(options = {}, measured = null, duration = null)
     filters.push(`loudnorm=I=${targetLufs}:TP=${truePeak}:LRA=${lra}:print_format=json`);
   }
 
-  // 9. Smart Trailing Silence Trim & Reverb Tail Fade-Out (Safe -75dB threshold protects delicate reverb tails)
-  if (autoFadeOut && measured) {
-    const fadeDur = options.fadeOutSecs !== undefined ? options.fadeOutSecs : 1.5;
-    filters.push(
-      `areverse, silenceremove=start_periods=1:start_duration=0.2:start_threshold=-75dB, afade=t=in:ss=0:d=${fadeDur}:curve=exp, areverse`
-    );
+  // 9. Natural Reverb Tail Fade-Out (Gentle quarter-sine decay over the end of the active audio)
+  if (autoFadeOut) {
+    const activeDur = boundaries?.activeDuration || totalDuration;
+    if (typeof activeDur === 'number' && activeDur > 2.0) {
+      const fadeDur =
+        options.fadeOutSecs !== undefined ? options.fadeOutSecs : Math.min(1.5, Math.max(0.6, activeDur * 0.02));
+      const fadeStart = Math.max(0, activeDur - fadeDur);
+      filters.push(`afade=t=out:st=${fadeStart.toFixed(3)}:d=${fadeDur.toFixed(3)}:curve=qsin`);
+    }
+  }
+
+  // 10. Clean 0.5s Digital Pause Padding (Apple Music & Streaming album spacing)
+  if (autoTrim && pauseDurationSecs > 0) {
+    filters.push(`apad=pad_dur=${pauseDurationSecs.toFixed(2)}`);
   }
 
   return {
@@ -94,13 +124,16 @@ export function buildFilterChain(options = {}, measured = null, duration = null)
       autoTrim,
       autoFadeIn,
       autoFadeOut,
+      pauseDurationSecs,
+      boundaries,
       masteringMode: measured ? '2-Pass Calibrated (Linear)' : '1-Pass Analysis',
       enhancedChain: [
-        'auto_lead_silence_trim',
+        'audible_boundary_calibration',
         'anticlick_fadein',
         'transparent_eq',
         'ebur128_two_pass_linear',
-        'tail_trim_and_fadeout'
+        'natural_tail_fadeout',
+        'clean_pause_padding'
       ]
     }
   };
