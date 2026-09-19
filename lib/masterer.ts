@@ -294,7 +294,7 @@ export async function masterSingleFile(inputFile, options = {}) {
       `Measured True Peak: ${finalMasterMetrics.truePeakDbtp} dBTP (Ceiling: ${pass2.settings.truePeak} dBTP)`,
       `Loudness Range: ${finalMasterMetrics.loudnessRangeLra} LU (Dynamic transparency preserved)`,
       `Acoustic Boundary Calibration: 150ms lead-in pre-roll (audible start at ${initialAnalysis.boundaries?.audibleStart || 0}s)`,
-      `Natural Reverb Tail Decay: Smooth musical fade-out + 0.50s clean pause padding`,
+      `Natural Reverb Tail Decay: Smooth 2s-3s hsin fade-out + 0.50s clean pause padding`,
       ...(isAuto && initialAnalysis.spectralDNA
         ? [
             `Autonomous Spectral DNA: Bass ${initialAnalysis.spectralDNA.bassMeanDb}dB | Mud ${initialAnalysis.spectralDNA.mudMeanDb}dB | Treble ${initialAnalysis.spectralDNA.trebleMeanDb}dB`,

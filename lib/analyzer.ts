@@ -261,7 +261,7 @@ export function detectGenre(arg1 = {}, arg2 = {}, arg3 = '') {
 // Detect exact audible start and end boundaries to protect pre-roll transients and reverb tail decay
 export async function detectAudibleBoundaries(filePath, totalDuration = 0) {
   const ffmpegBin = findLocalFfmpeg();
-  const silenceArgs = ['-v', 'info', '-i', filePath, '-af', 'silencedetect=noise=-55dB:d=0.15', '-f', 'null', '-'];
+  const silenceArgs = ['-v', 'info', '-i', filePath, '-af', 'silencedetect=noise=-45dB:d=1.5', '-f', 'null', '-'];
 
   let audibleStart = 0;
   let audibleEnd = totalDuration;

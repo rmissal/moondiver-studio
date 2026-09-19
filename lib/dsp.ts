@@ -109,9 +109,9 @@ export function buildFilterChain(options: any = {}, measured: any = null, bounda
     const activeDur = boundaries?.activeDuration || totalDuration;
     if (typeof activeDur === 'number' && activeDur > 2.0) {
       const fadeDur =
-        options.fadeOutSecs !== undefined ? options.fadeOutSecs : Math.min(1.5, Math.max(0.6, activeDur * 0.02));
+        options.fadeOutSecs !== undefined ? options.fadeOutSecs : Math.min(3.0, Math.max(2.0, activeDur * 0.03));
       const fadeStart = Math.max(0, activeDur - fadeDur);
-      filters.push(`afade=t=out:st=${fadeStart.toFixed(3)}:d=${fadeDur.toFixed(3)}:curve=qsin`);
+      filters.push(`afade=t=out:st=${fadeStart.toFixed(3)}:d=${fadeDur.toFixed(3)}:curve=hsin`);
     }
   }
 
