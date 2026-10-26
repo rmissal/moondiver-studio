@@ -95,7 +95,8 @@ export async function masterSingleFile(inputFile, options = {}) {
   if (fs.existsSync(wavDir)) {
     const currentWavs = fs.readdirSync(wavDir);
     existingMatches = currentWavs.filter(f => {
-      if (!f.toLowerCase().endsWith('.wav')) return false;
+      const lower = f.toLowerCase();
+      if (!lower.endsWith('.wav') || lower.endsWith('.deharsh.wav') || lower.endsWith('.bak.wav')) return false;
       const fClean = f
         .replace(/^\d+[\s_-]*/, '')
         .replace(/\.wav$/i, '')

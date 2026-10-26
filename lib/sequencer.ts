@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Album Sequencing & Dramatic Tension Arc Engine
  * Computes optimal track ordering, enforces sequel spacing & chronology, generates M3U playlists and TRACKLIST.md
  */
@@ -49,9 +49,9 @@ function getPartNumber(title) {
   if (/\s+IV$/i.test(title)) return 4;
   if (/\s+V$/i.test(title)) return 5;
   if (/\(.*?(original|solo).*?\)/i.test(title)) return 1;
-  if (/\(.*?(duet).*?\)/i.test(title)) return 2;
-  if (/\(.*?(live).*?\)/i.test(title)) return 2;
-  if (/\(.*?(remix|mix).*?\)/i.test(title)) return 3;
+  if (/\(.*?(duet|live|radio|acoustic|unplugged|extended|edit|version).*?\)/i.test(title)) return 2;
+  if (/\(.*?(remix|mix|vip|reprise).*?\)/i.test(title)) return 3;
+  if (/\(.*?\)/i.test(title)) return 2; // Any other parenthetical alternate version follows the main version
   const numMatch = title.match(/\s+(\d+)$/);
   if (numMatch) return parseInt(numMatch[1], 10);
   return 1;
@@ -113,15 +113,22 @@ export function sequenceAlbumTracks(tracks, model = 'cinematic_journey') {
 
   const unassigned = [...enriched];
   const sequenced = new Array(n);
-  const minSeparation = Math.max(3, Math.floor(n / 4)); // Minimum separation between related titles
+  const minSeparation = Math.max(3, Math.floor(n / 3)); // Strong separation between two versions of the same song
 
-  // 1. Assign Opener (Slot 0)
-  let openerIdx = unassigned.findIndex(t => /intro|prologue|dawn|start|prelude|journey/i.test(t.cleanTitle));
+  // Helper: check if track `t` has an earlier version (Part I / Original) that hasn't been placed yet
+  const hasEarlierVersionInPool = (t, pool) =>
+    t.partNum > 1 && pool.some(u => u !== t && u.family === t.family && u.partNum < t.partNum);
+
+  // 1. Assign Opener (Slot 0) - Never pick a Part II / Live / Remix as opener if original exists!
+  let openerIdx = unassigned.findIndex(
+    t => /intro|prologue|dawn|start|prelude|journey/i.test(t.cleanTitle) && !hasEarlierVersionInPool(t, unassigned)
+  );
   if (openerIdx === -1) {
     openerIdx = 0;
-    let bestDiff = 999;
+    let bestDiff = 999999;
     unassigned.forEach((t, idx) => {
-      const diff = Math.abs(t.energyScore - idealCurve[0]);
+      let diff = Math.abs(t.energyScore - idealCurve[0]);
+      if (hasEarlierVersionInPool(t, unassigned)) diff += 10000;
       if (diff < bestDiff) {
         bestDiff = diff;
         openerIdx = idx;
@@ -130,13 +137,23 @@ export function sequenceAlbumTracks(tracks, model = 'cinematic_journey') {
   }
   sequenced[0] = unassigned.splice(openerIdx, 1)[0];
 
-  // 2. Assign Closer (Slot n-1)
-  let closerIdx = unassigned.findIndex(t => /chill|tranquility|outro|epilogue|peace|zen|silence/i.test(t.cleanTitle));
+  // 2. Assign Closer (Slot n-1) - Never pick an Original (Part I) as closer if its Live/Remix (Part II) is still in the pool!
+  // Otherwise Part I is at the very end of the album and Part II is forced before it!
+  const hasLaterVersionInPool = (t, pool) => pool.some(u => u !== t && u.family === t.family && u.partNum > t.partNum);
+
+  let closerIdx = unassigned.findIndex(
+    t =>
+      /chill|tranquility|outro|epilogue|peace|zen|silence/i.test(t.cleanTitle) &&
+      !hasLaterVersionInPool(t, unassigned) &&
+      sequenced[0]?.family !== t.family
+  );
   if (closerIdx === -1) {
     closerIdx = 0;
-    let bestDiff = 999;
+    let bestDiff = 999999;
     unassigned.forEach((t, idx) => {
-      const diff = Math.abs(t.energyScore - idealCurve[n - 1]);
+      let diff = Math.abs(t.energyScore - idealCurve[n - 1]);
+      if (hasLaterVersionInPool(t, unassigned)) diff += 10000;
+      if (sequenced[0] && sequenced[0].family === t.family && n - 1 < minSeparation) diff += 5000;
       if (diff < bestDiff) {
         bestDiff = diff;
         closerIdx = idx;
@@ -147,7 +164,12 @@ export function sequenceAlbumTracks(tracks, model = 'cinematic_journey') {
 
   // 3. Assign Grand Climax (Slot around 70-75% index)
   const climaxSlot = Math.min(n - 3, Math.max(1, Math.round(n * 0.72)));
-  const climaxIdx = unassigned.findIndex(t => /climax|epic|hope|echoes|summit/i.test(t.cleanTitle));
+  const climaxIdx = unassigned.findIndex(
+    t =>
+      /climax|epic|hope|echoes|summit/i.test(t.cleanTitle) &&
+      !hasEarlierVersionInPool(t, unassigned) &&
+      (!sequenced[n - 1] || sequenced[n - 1].family !== t.family || n - 1 - climaxSlot >= minSeparation)
+  );
   if (climaxIdx !== -1) {
     sequenced[climaxSlot] = unassigned.splice(climaxIdx, 1)[0];
   }
@@ -163,23 +185,34 @@ export function sequenceAlbumTracks(tracks, model = 'cinematic_journey') {
       const t = unassigned[idx];
       let diff = Math.abs(t.energyScore - targetEnergy);
 
-      // Rule 1: Chronology (Part II / Remix must not precede Part I)
-      if (t.partNum > 1) {
-        const hasUnassignedPrecursor = unassigned.some(u => u.family === t.family && u.partNum < t.partNum);
-        if (hasUnassignedPrecursor) {
-          diff += 10000; // Blocked: precursor has not been placed yet
+      // Rule 1: Chronology (Part II / Live / Radio / Remix must not precede Part I)
+      if (hasEarlierVersionInPool(t, unassigned)) {
+        diff += 10000; // Blocked: precursor has not been placed yet
+      }
+
+      // Also check against already pre-assigned future slots (like Climax or Closer)
+      for (let futureSlot = i + 1; futureSlot < n; futureSlot++) {
+        const futurePlaced = sequenced[futureSlot];
+        if (futurePlaced && futurePlaced.family === t.family && futurePlaced.partNum < t.partNum) {
+          diff += 10000;
         }
       }
 
-      // Rule 2: Thematic separation distance
-      for (let prevSlot = 0; prevSlot < i; prevSlot++) {
-        const placed = sequenced[prevSlot];
+      // Rule 2: Thematic separation distance (check ALL already placed slots, including Climax & Closer!)
+      for (let otherSlot = 0; otherSlot < n; otherSlot++) {
+        const placed = sequenced[otherSlot];
         if (placed && placed.family === t.family) {
-          const distance = i - prevSlot;
+          const distance = Math.abs(i - otherSlot);
           if (distance < minSeparation) {
-            diff += (minSeparation - distance + 1) * 300;
+            diff += (minSeparation - distance + 1) * 500;
           }
         }
+      }
+
+      // Rule 3: If this track has a later version still in unassigned, don't place Part I too late in the album
+      // so Part II still has room to maintain minSeparation!
+      if (hasLaterVersionInPool(t, unassigned) && i > n - 1 - minSeparation) {
+        diff += 4000;
       }
 
       if (diff < bestDiff) {
@@ -338,11 +371,17 @@ export async function sequenceAlbum(targetPath, options = {}) {
       }
     }
 
-    // Clean up any remaining un-numbered duplicate files only if renumbering
+    // Clean up any remaining un-numbered duplicate WAV files only if renumbering (preserve .json, .deharsh.wav, .bak.wav)
     if (applyRenumbering) {
       const finalWavs = fs.readdirSync(wavDir);
       for (const f of finalWavs) {
-        if (!/^\d+\s*-\s*/.test(f)) {
+        const lower = f.toLowerCase();
+        if (
+          lower.endsWith('.wav') &&
+          !lower.endsWith('.deharsh.wav') &&
+          !lower.endsWith('.bak.wav') &&
+          !/^\d+\s*-\s*/.test(f)
+        ) {
           try {
             fs.unlinkSync(path.join(wavDir, f));
           } catch {}

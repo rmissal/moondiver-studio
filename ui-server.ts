@@ -73,9 +73,11 @@ app.post('/api/scan-folder', (req, res) => {
 
   try {
     const files = fs.readdirSync(folderPath);
-    const audioFiles = files.filter(
-      f => f.toLowerCase().endsWith('.wav') || f.toLowerCase().endsWith('.flac') || f.toLowerCase().endsWith('.mp3')
-    );
+    const audioFiles = files.filter(f => {
+      const lower = f.toLowerCase();
+      if (lower.endsWith('.deharsh.wav') || lower.endsWith('.bak.wav')) return false;
+      return lower.endsWith('.wav') || lower.endsWith('.flac') || lower.endsWith('.mp3');
+    });
 
     // Determine album root (one folder up if we are in suno_exports)
     let albumRoot = folderPath;
@@ -131,21 +133,31 @@ app.post('/api/scan-folder', (req, res) => {
       const mixedFile = mixedCandidates.find(f => fs.existsSync(f)) || null;
       const hasMixed = !!mixedFile;
 
-      // Check Step 4: Mastered in selected version folder (picks newest master)
+      // Check Step 4: Mastered in selected version folder (strict exact title match first!)
       let hasMastered = false;
       let masteredFile = null;
       let masterStats = null;
       if (fs.existsSync(masteredFolder)) {
         const wavFiles = fs.readdirSync(masteredFolder);
-        const cleanName = name.replace(/^\d+[\s_-]*/, '').toLowerCase();
-        const matches = wavFiles.filter(f => {
-          if (!f.toLowerCase().endsWith('.wav')) return false;
+        const cleanName = name
+          .replace(/^\d+[\s_-]*/, '')
+          .trim()
+          .toLowerCase();
+        const validWavs = wavFiles.filter(f => {
+          const lower = f.toLowerCase();
+          return lower.endsWith('.wav') && !lower.endsWith('.deharsh.wav') && !lower.endsWith('.bak.wav');
+        });
+
+        // 1. Strict exact match (ignoring leading track numbers like "01 - ")
+        let matches = validWavs.filter(f => {
           const fClean = f
             .replace(/^\d+[\s_-]*/, '')
             .replace(/\.wav$/i, '')
+            .trim()
             .toLowerCase();
-          return fClean === cleanName || f.toLowerCase().includes(cleanName);
+          return fClean === cleanName;
         });
+
         if (matches.length > 0) {
           matches.sort((a, b) => {
             const statA = fs.statSync(path.join(masteredFolder, a));
@@ -171,6 +183,13 @@ app.post('/api/scan-folder', (req, res) => {
         }
       }
 
+      // Check Step 5: De-Harsh Status (if .pre_deharsh.bak.wav or .deharsh.wav exists for THIS exact track)
+      const targetForDeharsh = masteredFile || fullPath;
+      const baseNoExt = targetForDeharsh.replace(/\.[^/.]+$/, '');
+      const hasDeharshApplied = fs.existsSync(`${baseNoExt}.pre_deharsh.bak.wav`);
+      const deharshPreviewCandidate = `${baseNoExt}.deharsh.wav`;
+      const hasDeharshPreview = fs.existsSync(deharshPreviewCandidate) ? deharshPreviewCandidate : null;
+
       return {
         name,
         fileName: file,
@@ -182,7 +201,9 @@ app.post('/api/scan-folder', (req, res) => {
         hasMastered,
         mixedFile: hasMixed ? mixedFile : null,
         masteredFile,
-        masterStats
+        masterStats,
+        deharshApplied: hasDeharshApplied,
+        deharshPreviewFile: hasDeharshPreview
       };
     });
 
@@ -693,6 +714,112 @@ app.post('/api/quality-report', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// API: Analyze Chords
+app.post('/api/analyze-chords', (req, res) => {
+  const { targetFile } = req.body;
+  if (!targetFile || !fs.existsSync(targetFile)) {
+    return res.status(400).json({ error: 'Valid targetFile is required' });
+  }
+
+  const chordsFile = targetFile.replace(/\.wav$/i, '.chords.json').replace(/\.mp3$/i, '.chords.json');
+
+  // Check if we already analyzed this file
+  if (fs.existsSync(chordsFile)) {
+    try {
+      const cached = JSON.parse(fs.readFileSync(chordsFile, 'utf8'));
+      return res.json(cached);
+    } catch (e) {
+      // If reading fails, proceed to re-analyze
+    }
+  }
+
+  const scriptPath = path.join(__dirname, 'lib', 'chord_detector.py');
+  const pythonCmd = 'python'; // User has python in PATH
+
+  const proc = spawn(pythonCmd, [scriptPath, targetFile]);
+  let output = '';
+  let errorOutput = '';
+
+  proc.stdout.on('data', d => {
+    output += d.toString();
+  });
+  proc.stderr.on('data', d => {
+    errorOutput += d.toString();
+  });
+
+  proc.on('close', code => {
+    try {
+      // Find JSON array or object in output (in case Python printed warnings)
+      const match = output.match(/\{"status":\s*"success"[\s\S]*\}\s*$/);
+      if (match) {
+        const result = JSON.parse(match[0]);
+        // Save the result to disk!
+        fs.writeFileSync(chordsFile, JSON.stringify(result, null, 2), 'utf8');
+        res.json(result);
+      } else {
+        const errorMatch = output.match(/\{"status":\s*"error"[\s\S]*\}\s*$/);
+        if (errorMatch) {
+          res.status(500).json(JSON.parse(errorMatch[0]));
+        } else {
+          res
+            .status(500)
+            .json({ error: 'Failed to parse chord detector output.', details: output, stderr: errorOutput });
+        }
+      }
+    } catch (e) {
+      res.status(500).json({ error: 'Invalid response from chord detector.', details: output, stderr: errorOutput });
+    }
+  });
+});
+
+// API: Dedicated Suno Vocal De-Harsh / De-Clink Analyzer & Processor
+app.post('/api/deharsh-vocals', (req, res) => {
+  const { targetFile, mode = 'analyze', strength = 'medium', applyToMaster = false } = req.body;
+  if (!targetFile || !fs.existsSync(targetFile)) {
+    return res.status(400).json({ error: 'Valid targetFile is required' });
+  }
+
+  const scriptPath = path.join(__dirname, 'lib', 'vocal_deharsh.py');
+  const pythonCmd = 'python';
+
+  const args = [scriptPath, targetFile, mode, strength, applyToMaster ? 'true' : 'false'];
+  const proc = spawn(pythonCmd, args);
+  let output = '';
+  let errorOutput = '';
+
+  proc.stdout.on('data', d => {
+    output += d.toString();
+  });
+  proc.stderr.on('data', d => {
+    errorOutput += d.toString();
+  });
+
+  proc.on('close', () => {
+    try {
+      const match = output.match(/\{"status":\s*"success"[\s\S]*\}\s*$/);
+      if (match) {
+        const result = JSON.parse(match[0]);
+        return res.json(result);
+      }
+      const errorMatch = output.match(/\{"status":\s*"error"[\s\S]*\}\s*$/);
+      if (errorMatch) {
+        return res.status(500).json(JSON.parse(errorMatch[0]));
+      }
+      return res.status(500).json({
+        error: 'Failed to parse vocal de-harsh output.',
+        details: output,
+        stderr: errorOutput
+      });
+    } catch (e) {
+      return res.status(500).json({
+        error: 'Invalid response from vocal de-harsh engine.',
+        details: output,
+        stderr: errorOutput
+      });
+    }
+  });
 });
 
 app.listen(PORT, () => {

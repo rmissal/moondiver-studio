@@ -19,7 +19,6 @@
       x-ref="masterAudio"
       style="position: fixed; top: -100px; left: -100px; width: 1px; height: 1px; opacity: 0.01; pointer-events: none"
       preload="auto"
-      @timeupdate="if ($refs.masterAudio) audioCurrentTime = $refs.masterAudio.currentTime"
       @durationchange="if ($refs.masterAudio) audioDuration = $refs.masterAudio.duration || 0"
       @loadedmetadata="if ($refs.masterAudio) audioDuration = $refs.masterAudio.duration || 0"
       @ended="stopAudio()"
@@ -113,11 +112,28 @@
               <span class="w-1 h-2 bg-cyan-400 animate-pulse delay-150 rounded-full"></span>
             </div>
 
-            <span
-              class="text-xs font-bold text-white max-w-[90px] sm:max-w-[130px] truncate"
-              x-text="currentlyPlayingTitle"
-              :title="currentlyPlayingTitle"
-            ></span>
+            <div class="flex flex-col">
+              <span
+                class="text-xs font-bold text-white max-w-[90px] sm:max-w-[130px] truncate"
+                x-text="currentlyPlayingTitle"
+                :title="currentlyPlayingTitle"
+              ></span>
+              <template x-if="getGlobalCurrentChord()">
+                <span
+                  class="text-[10px] text-amber-400 font-bold bg-amber-900/40 px-1.5 py-0.5 rounded w-max mt-0.5"
+                  x-text="'🎸 ' + transposeChord(getGlobalCurrentChord(), getGlobalActiveCapo())"
+                ></span>
+              </template>
+            </div>
+
+            <!-- Open Chords Modal -->
+            <button
+              @click="openGlobalChords()"
+              class="p-1.5 rounded-lg bg-gray-800 hover:bg-amber-600 hover:text-white text-amber-400 transition shadow flex items-center justify-center font-bold text-xs"
+              title="Open Full Play-Along Modal View"
+            >
+              🎸
+            </button>
 
             <!-- Rewind 10s -->
             <button
@@ -225,6 +241,406 @@
         </template>
       </div>
     </div>
+
+    <!-- Global Live Chords Modal -->
+    <template x-if="getActiveTrack() && getActiveTrack().chords && getActiveTrack().showChords">
+      <div
+        class="fixed inset-0 z-40 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 sm:p-10 transition-opacity"
+      >
+        <div
+          class="bg-[#0a0f1d] border border-amber-500/60 rounded-3xl p-6 sm:p-10 shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col relative overflow-hidden"
+        >
+          <!-- Close Button -->
+          <button
+            @click="getActiveTrack().showChords = false"
+            class="absolute top-6 right-6 text-gray-400 hover:text-white transition bg-gray-800 p-2 rounded-full"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+
+          <!-- Header -->
+          <div
+            class="flex flex-col sm:flex-row items-center justify-between border-b border-gray-700/50 pb-6 mb-6 gap-6"
+          >
+            <div class="flex items-center gap-4">
+              <span
+                class="w-4 h-4 rounded-full bg-amber-400 animate-pulse shadow-[0_0_15px_rgba(251,191,36,0.5)]"
+              ></span>
+              <div>
+                <h3 class="text-xl font-black uppercase tracking-widest text-amber-300">Live Chords</h3>
+                <p class="text-sm text-gray-400 font-medium mt-1" x-text="getActiveTrack().name"></p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-8 pr-4 sm:pr-12">
+              <div class="flex flex-col">
+                <label class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2">Capo Transpose</label>
+                <select
+                  x-model="getActiveTrack().capo"
+                  class="bg-[#111827] border-2 border-gray-600 hover:border-amber-500 rounded-lg text-base text-amber-300 px-4 py-2 focus:border-amber-500 outline-none font-bold transition"
+                >
+                  <option :value="0">0 (Open)</option>
+                  <template x-for="i in 12" :key="i">
+                    <option :value="i" x-text="i"></option>
+                  </template>
+                </select>
+              </div>
+
+              <div class="w-[1px] h-16 bg-gray-700/60"></div>
+
+              <div class="flex flex-col items-center w-[160px]">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-xs text-gray-500 font-bold uppercase tracking-widest">CURRENT</span>
+                  <template x-if="getActiveTrack().bpm">
+                    <span
+                      class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/30"
+                      x-text="getActiveTrack().bpm + ' BPM'"
+                    ></span>
+                  </template>
+                </div>
+                <span
+                  class="text-5xl font-black text-amber-400 text-center"
+                  x-text="getGlobalCurrentChord() ? transposeChord(getGlobalCurrentChord(), getGlobalActiveCapo()) : '-'"
+                >
+                </span>
+                <!-- Top Progress Bar -->
+                <template x-if="getGlobalCurrentChordObj()">
+                  <div class="w-full h-1.5 bg-gray-800 rounded-full mt-2 overflow-hidden border border-gray-700/50">
+                    <div
+                      class="h-full bg-amber-400"
+                      :style="`width: ${Math.min(100, Math.max(0, ((audioCurrentTime - getGlobalCurrentChordObj().start) / (getGlobalCurrentChordObj().end - getGlobalCurrentChordObj().start)) * 100))}%`"
+                    ></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <!-- Full Song Structure Timeline -->
+          <div class="flex-1 overflow-y-auto pr-4 custom-scrollbar">
+            <div class="flex flex-wrap gap-3 sm:gap-4 content-start">
+              <template x-for="(segment, idx) in getActiveTrack().chords" :key="idx">
+                <div
+                  @click="jumpToTime(segment.start)"
+                  :style="'flex-grow: ' + Math.min(8, (segment.beats || 2)) + '; flex-basis: calc(' + Math.min(8, (segment.beats || 2)) + ' * 50px);'"
+                  class="relative overflow-hidden flex flex-col items-center justify-center min-w-[70px] sm:min-w-[90px] p-3 rounded-xl transition-all duration-300 cursor-pointer"
+                  :class="(audioCurrentTime >= segment.start && audioCurrentTime < segment.end) ? 'border border-amber-500 scale-110 shadow-[0_0_20px_rgba(251,191,36,0.4)] z-10 text-gray-900' : 'bg-gray-800/40 text-gray-400 border border-gray-700/50 hover:border-amber-500 hover:bg-gray-800 hover:text-amber-300'"
+                  x-effect="(audioCurrentTime >= segment.start && audioCurrentTime < segment.end) && $el.scrollIntoView({behavior: 'smooth', block: 'center'})"
+                >
+                  <!-- Progress Fill -->
+                  <template x-if="audioCurrentTime >= segment.start && audioCurrentTime < segment.end">
+                    <div
+                      class="absolute top-0 left-0 h-full bg-amber-500 -z-10"
+                      :style="`width: ${Math.min(100, Math.max(0, ((audioCurrentTime - segment.start) / (segment.end - segment.start)) * 100))}%`"
+                    ></div>
+                  </template>
+
+                  <template x-if="audioCurrentTime >= segment.start && audioCurrentTime < segment.end">
+                    <div
+                      class="absolute top-0 right-0 h-full bg-amber-600/30 -z-10"
+                      :style="`width: ${100 - Math.min(100, Math.max(0, ((audioCurrentTime - segment.start) / (segment.end - segment.start)) * 100))}%`"
+                    ></div>
+                  </template>
+
+                  <span
+                    class="text-2xl font-black relative z-20"
+                    x-text="transposeChord(segment.chord, getGlobalActiveCapo())"
+                  ></span>
+                  <span
+                    class="text-xs font-mono opacity-60 mt-1 relative z-20"
+                    x-text="formatChordTime(segment.start)"
+                  ></span>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <div class="mt-6 text-center">
+            <p class="text-xs text-gray-500 flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
+              Nutze den schwebenden Player oben rechts (Play/Pause/Zurückspulen), während dieses Fenster offen ist.
+            </p>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Dedicated Suno Vocal De-Harsh / De-Clink Studio Modal -->
+    <template x-if="deharshModalTrack && showDeharshModal">
+      <div
+        class="fixed inset-0 z-40 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 sm:p-8 transition-opacity"
+      >
+        <div
+          class="bg-[#0a0f1d] border border-fuchsia-500/60 rounded-3xl p-6 sm:p-8 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col relative overflow-y-auto"
+        >
+          <!-- Close Button -->
+          <button
+            @click="showDeharshModal = false"
+            class="absolute top-6 right-6 text-gray-400 hover:text-white transition bg-gray-800 p-2 rounded-full"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+
+          <!-- Header -->
+          <div class="flex items-center gap-3.5 border-b border-gray-800 pb-5 mb-6">
+            <div
+              class="w-11 h-11 rounded-2xl bg-fuchsia-500/15 border border-fuchsia-500/40 flex items-center justify-center text-2xl shadow-lg"
+            >
+              🪄
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3
+                  class="text-lg sm:text-xl font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 via-pink-400 to-cyan-400"
+                >
+                  Suno Vocal De-Harsh &amp; De-Clink Studio
+                </h3>
+                <span
+                  class="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-fuchsia-950 text-fuchsia-300 border border-fuchsia-500/30"
+                  >Spectral DSP</span
+                >
+              </div>
+              <p
+                class="text-xs text-gray-400 mt-0.5 font-mono"
+                x-text="deharshModalTrack.name + (deharshModalTrack.hasMastered ? ' (Master WAV)' : ' (Raw WAV)')"
+              ></p>
+            </div>
+          </div>
+
+          <!-- Loading State -->
+          <template x-if="deharshLoading">
+            <div class="py-12 flex flex-col items-center justify-center gap-3 text-fuchsia-300">
+              <svg
+                class="animate-spin h-8 w-8 text-fuchsia-400"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              <span
+                class="text-sm font-bold tracking-wide"
+                x-text="deharshStatusText || 'Scanning high-frequency vocal formants & metallic resonances...'"
+              ></span>
+            </div>
+          </template>
+
+          <!-- Analysis & Processing Controls -->
+          <template x-if="!deharshLoading && deharshModalTrack.deharshData">
+            <div class="space-y-6">
+              <!-- Top KPI Cards -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <!-- Harshness Score Card -->
+                <div class="bg-gray-900/90 border border-gray-800 rounded-2xl p-4 flex flex-col justify-between">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400"
+                    >Detected Clink / Harshness</span
+                  >
+                  <div class="flex items-baseline gap-2 my-2">
+                    <span
+                      class="text-3xl font-black"
+                      :class="(deharshModalTrack.deharshData.harshnessScore ?? deharshModalTrack.deharshData.beforeScore) >= 60 ? 'text-red-400' : ((deharshModalTrack.deharshData.harshnessScore ?? deharshModalTrack.deharshData.beforeScore) >= 35 ? 'text-amber-400' : 'text-emerald-400')"
+                      x-text="(deharshModalTrack.deharshData.harshnessScore ?? deharshModalTrack.deharshData.beforeScore) + ' / 100'"
+                    ></span>
+                    <template x-if="deharshModalTrack.deharshData.afterScore !== undefined">
+                      <span
+                        class="text-lg font-black text-emerald-400"
+                        x-text="'➔ ' + deharshModalTrack.deharshData.afterScore"
+                      ></span>
+                    </template>
+                  </div>
+                  <span
+                    class="text-xs font-semibold px-2 py-0.5 rounded w-max"
+                    :class="(deharshModalTrack.deharshData.harshnessScore ?? deharshModalTrack.deharshData.beforeScore) >= 60 ? 'bg-red-950/80 text-red-300 border border-red-500/30' : ((deharshModalTrack.deharshData.harshnessScore ?? deharshModalTrack.deharshData.beforeScore) >= 35 ? 'bg-amber-950/80 text-amber-300 border border-amber-500/30' : 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/30')"
+                    x-text="deharshModalTrack.deharshData.severity || 'Processed'"
+                  ></span>
+                </div>
+
+                <!-- Spectral Breakdown Card -->
+                <div class="bg-gray-900/90 border border-gray-800 rounded-2xl p-4 flex flex-col justify-between">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400"
+                    >Spectral Resonance Peaks</span
+                  >
+                  <div class="space-y-1.5 my-2 text-xs font-mono">
+                    <div class="flex justify-between">
+                      <span class="text-gray-400">Presence Glare (2.8–5.5k):</span>
+                      <span
+                        class="text-fuchsia-300 font-bold"
+                        x-text="'+' + (deharshModalTrack.deharshData.metrics?.presenceGlareDb ?? deharshModalTrack.deharshData.metrics?.beforeSpikesDb ?? 0) + ' dB'"
+                      ></span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-gray-400">Metallic Fizz (5.5–10.5k):</span>
+                      <span
+                        class="text-cyan-300 font-bold"
+                        x-text="'+' + (deharshModalTrack.deharshData.metrics?.sibilanceFizzDb ?? deharshModalTrack.deharshData.metrics?.afterSpikesDb ?? 0) + ' dB'"
+                      ></span>
+                    </div>
+                  </div>
+                  <span class="text-[11px] text-gray-500">Narrow-band AI whistle &amp; sibilance spikes</span>
+                </div>
+
+                <!-- Reduction Result Card -->
+                <div class="bg-gray-900/90 border border-gray-800 rounded-2xl p-4 flex flex-col justify-between">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400"
+                    >Filter Reduction Status</span
+                  >
+                  <template x-if="deharshModalTrack.deharshData.reductionPercent !== undefined">
+                    <div class="my-2">
+                      <div
+                        class="text-3xl font-black text-emerald-400"
+                        x-text="'-' + deharshModalTrack.deharshData.reductionPercent + '%'"
+                      ></div>
+                      <div
+                        class="text-xs text-gray-300 mt-1"
+                        x-text="deharshModalTrack.deharshData.appliedToMaster ? '✔ Saved to Master & MP3' : '✔ Clean Preview Ready'"
+                      ></div>
+                    </div>
+                  </template>
+                  <template x-if="deharshModalTrack.deharshData.reductionPercent === undefined">
+                    <div class="my-2">
+                      <div class="text-xs text-gray-400">Recommended Filter Mode:</div>
+                      <div
+                        class="text-xl font-black text-fuchsia-400 uppercase mt-0.5"
+                        x-text="deharshModalTrack.deharshData.recommendedStrength || 'medium'"
+                      ></div>
+                    </div>
+                  </template>
+                  <span class="text-[11px] text-gray-500">2048-bin STFT Dynamic Notch + Tape Softener</span>
+                </div>
+              </div>
+
+              <!-- Detected Harshness Hotspots Timeline (Click to Jump & Listen) -->
+              <template
+                x-if="deharshModalTrack.deharshData.hotspots && deharshModalTrack.deharshData.hotspots.length > 0"
+              >
+                <div class="bg-gray-900/70 border border-gray-800 rounded-2xl p-4">
+                  <div class="flex items-center justify-between mb-2.5">
+                    <span class="text-xs font-bold uppercase tracking-wider text-fuchsia-300 flex items-center gap-1.5">
+                      <span>🔍 Detected Vocal Glare Hotspots</span>
+                      <span class="text-[10px] text-gray-400 font-normal"
+                        >(Click timestamp to jump player &amp; inspect)</span
+                      >
+                    </span>
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <template x-for="(hs, idx) in deharshModalTrack.deharshData.hotspots" :key="idx">
+                      <button
+                        @click="jumpToDeharshHotspot(hs.start)"
+                        class="px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-fuchsia-900/50 border border-gray-700 hover:border-fuchsia-400 text-xs font-mono transition flex items-center gap-1.5 shadow"
+                      >
+                        <span
+                          class="text-fuchsia-400 font-bold"
+                          x-text="formatTime(hs.start) + ' – ' + formatTime(hs.end)"
+                        ></span>
+                        <span
+                          class="text-[10px] px-1.5 py-0.2 rounded bg-fuchsia-950 text-fuchsia-300"
+                          x-text="hs.intensity + 'dB'"
+                        ></span>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+              </template>
+
+              <!-- DSP Strength & Action Controls -->
+              <div class="bg-gray-900/90 border border-fuchsia-500/30 rounded-2xl p-5 space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <label class="text-xs font-bold uppercase tracking-wider text-gray-300 block mb-1"
+                      >De-Harsh / De-Clink Intensity</label
+                    >
+                    <p class="text-xs text-gray-400">
+                      Select how strongly narrow-band metallic spikes (2.8–11 kHz) and harsh sibilance are damped:
+                    </p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button
+                      @click="deharshStrength = 'gentle'"
+                      class="px-3.5 py-2 rounded-xl text-xs font-bold transition border"
+                      :class="deharshStrength === 'gentle' ? 'bg-fuchsia-600 text-white border-fuchsia-400 shadow-lg' : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'"
+                    >
+                      Gentle (Subtle)
+                    </button>
+                    <button
+                      @click="deharshStrength = 'medium'"
+                      class="px-3.5 py-2 rounded-xl text-xs font-bold transition border"
+                      :class="deharshStrength === 'medium' ? 'bg-fuchsia-600 text-white border-fuchsia-400 shadow-lg' : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'"
+                    >
+                      Medium (Balanced)
+                    </button>
+                    <button
+                      @click="deharshStrength = 'aggressive'"
+                      class="px-3.5 py-2 rounded-xl text-xs font-bold transition border"
+                      :class="deharshStrength === 'aggressive' ? 'bg-fuchsia-600 text-white border-fuchsia-400 shadow-lg' : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'"
+                    >
+                      Aggressive (Heavy Clink)
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Action Buttons: Preview vs Apply -->
+                <div class="pt-3 border-t border-gray-800 flex flex-wrap items-center justify-between gap-3">
+                  <!-- A/B Listen Buttons -->
+                  <div class="flex items-center gap-2.5 flex-wrap">
+                    <button
+                      @click="playDeharshSource('original')"
+                      class="px-3.5 py-2 rounded-xl text-xs font-bold border transition flex items-center gap-1.5"
+                      :class="currentlyPlayingTrack === deharshModalTrack.name + (deharshModalTrack.hasMastered ? 'master' : 'raw') && isPlaying ? 'bg-amber-600/30 border-amber-400 text-amber-200' : 'bg-gray-800 hover:bg-gray-700 text-gray-200 border-gray-600'"
+                    >
+                      <span>▶ Listen Original (Before)</span>
+                    </button>
+
+                    <template x-if="deharshModalTrack.deharshPreviewFile">
+                      <button
+                        @click="playDeharshSource('preview')"
+                        class="px-3.5 py-2 rounded-xl text-xs font-bold border transition flex items-center gap-1.5"
+                        :class="currentlyPlayingTrack === deharshModalTrack.name + 'deharsh' && isPlaying ? 'bg-emerald-600 text-white border-emerald-300 shadow-lg' : 'bg-emerald-900/40 hover:bg-emerald-800/60 text-emerald-300 border-emerald-500/50'"
+                      >
+                        <span>🎧 Listen Cleaned (After)</span>
+                      </button>
+                    </template>
+                  </div>
+
+                  <!-- Execute / Save Buttons -->
+                  <div class="flex items-center gap-2.5">
+                    <button
+                      @click="runVocalDeharsh(deharshModalTrack, false)"
+                      class="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-lg transition flex items-center gap-1.5"
+                    >
+                      <span>🪄 Generate Clean Preview</span>
+                    </button>
+
+                    <button
+                      @click="runVocalDeharsh(deharshModalTrack, true)"
+                      class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-lg transition flex items-center gap-1.5"
+                      title="Applies the De-Harsh filter directly to the track's Master WAV and companion MP3 (creates a .bak.wav backup automatically)"
+                    >
+                      <span>💾 Apply &amp; Overwrite Master</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
 
     <div class="max-w-7xl mx-auto relative z-10 pt-2">
       <!-- Top Row: Brand & Logo, Input Source, and Output Destination -->
@@ -1367,23 +1783,67 @@
 
                 <!-- Play Mastered Column (at the very end of the row) -->
                 <td class="py-4 px-1 text-center">
-                  <template x-if="track.hasMastered">
-                    <button
-                      @click="togglePlay('master', track)"
-                      class="w-8 h-8 rounded-full border-2 border-emerald-600 hover:border-emerald-400 hover:bg-emerald-900/30 flex items-center justify-center transition-all mx-auto shadow"
-                      title="Play 24-bit Lossless Studio Master"
-                    >
-                      <template x-if="currentlyPlayingTrack === track.name + 'master' && isPlaying">
-                        <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                        </svg>
-                      </template>
-                      <template x-if="currentlyPlayingTrack !== track.name + 'master' || !isPlaying">
-                        <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                      </template>
-                    </button>
+                  <template x-if="track.hasMastered || track.fullPath">
+                    <div class="flex flex-col items-center gap-2">
+                      <button
+                        @click="togglePlay('master', track)"
+                        class="w-8 h-8 rounded-full border-2 border-emerald-600 hover:border-emerald-400 hover:bg-emerald-900/30 flex items-center justify-center transition-all mx-auto shadow"
+                        title="Play 24-bit Lossless Studio Master"
+                      >
+                        <template x-if="currentlyPlayingTrack === track.name + 'master' && isPlaying">
+                          <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                          </svg>
+                        </template>
+                        <template x-if="currentlyPlayingTrack !== track.name + 'master' || !isPlaying">
+                          <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </template>
+                      </button>
+
+                      <button
+                        @click="if(!track.chords) { detectChords(track); } else { track.showChords = !track.showChords; if (track.showChords && currentlyPlayingTrack !== track.name + 'master' && currentlyPlayingTrack !== track.name + 'raw') togglePlay(track.hasMastered ? 'master' : 'raw', track); }"
+                        class="text-[10px] font-bold px-1.5 py-0.5 rounded transition shadow-sm"
+                        :class="track.showChords ? 'bg-amber-600 text-white' : 'bg-gray-700 text-amber-400 hover:bg-amber-900/50 hover:text-amber-300'"
+                        title="Show live chord progression & Capo transposition"
+                      >
+                        <template x-if="track.chordLoading">
+                          <svg
+                            class="animate-spin h-3 w-3 mx-auto text-amber-400"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              class="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              stroke-width="4"
+                            ></circle>
+                            <path
+                              class="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                        </template>
+                        <template x-if="!track.chordLoading">
+                          <span>🎸 Chords</span>
+                        </template>
+                      </button>
+
+                      <button
+                        @click="openDeharshModal(track)"
+                        class="text-[10px] font-bold px-1.5 py-0.5 rounded transition shadow-sm"
+                        :class="track.deharshApplied ? 'bg-emerald-700 text-white border border-emerald-400/50' : 'bg-gray-700 text-fuchsia-300 hover:bg-fuchsia-900/60 hover:text-fuchsia-200'"
+                        title="Dedicated Suno Vocal De-Harsh &amp; De-Clink Studio (Detect &amp; remove metallic vocal ringing)"
+                      >
+                        <span x-text="track.deharshApplied ? '✨ De-Harshed' : '🪄 De-Harsh'"></span>
+                      </button>
+                    </div>
                   </template>
                 </td>
               </tr>
@@ -1591,12 +2051,31 @@
             return `${m}:${s < 10 ? '0' : ''}${s}`;
           },
 
+          formatChordTime(secs) {
+            if (!secs || isNaN(secs)) return '0:00.0';
+            const m = Math.floor(secs / 60);
+            const s = Math.floor(secs % 60);
+            const d = Math.floor((secs % 1) * 10);
+            return `${m}:${s < 10 ? '0' : ''}${s}.${d}`;
+          },
+
           seekAudio(e) {
             const audio = this.$refs.masterAudio;
             if (audio) {
               const time = parseFloat(e.target.value);
               audio.currentTime = time;
               this.audioCurrentTime = time;
+            }
+          },
+
+          jumpToTime(time) {
+            const audio = this.$refs.masterAudio;
+            if (audio) {
+              audio.currentTime = time;
+              this.audioCurrentTime = time;
+              if (!this.isPlaying) {
+                this.toggleGlobalPlayback();
+              }
             }
           },
 
@@ -1631,6 +2110,237 @@
             this.audioDuration = 0;
           },
 
+          NOTES: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
+
+          transposeChord(chord, capo) {
+            if (!chord || capo === 0) return chord;
+            let root = chord;
+            let suffix = '';
+            if (chord.length > 1 && (chord[1] === '#' || chord[1] === 'b')) {
+              root = chord.substring(0, 2);
+              suffix = chord.substring(2);
+            } else {
+              root = chord.substring(0, 1);
+              suffix = chord.substring(1);
+            }
+
+            let idx = this.NOTES.indexOf(root);
+            if (idx === -1) return chord;
+
+            // Transpose DOWN by capo semitones
+            idx = (idx - capo + 12) % 12;
+            return this.NOTES[idx] + suffix;
+          },
+
+          getCurrentChord(track) {
+            const seg = this.getCurrentChordObj(track);
+            return seg ? seg.chord : null;
+          },
+          getCurrentChordObj(track) {
+            if (!track || !track.chords || track.chords.length === 0) return null;
+            const t =
+              this.currentlyPlayingTrack === track.name + 'master' || this.currentlyPlayingTrack === track.name + 'raw'
+                ? this.audioCurrentTime
+                : 0;
+            const segment = track.chords.find(c => t >= c.start && t < c.end);
+            return segment || null;
+          },
+
+          getGlobalCurrentChord() {
+            const seg = this.getGlobalCurrentChordObj();
+            return seg ? seg.chord : null;
+          },
+          getGlobalCurrentChordObj() {
+            if (!this.currentlyPlayingTrack) return null;
+            const track = this.tracks.find(
+              t => this.currentlyPlayingTrack === t.name + 'master' || this.currentlyPlayingTrack === t.name + 'raw'
+            );
+            if (!track || !track.chords) return null;
+            return this.getCurrentChordObj(track);
+          },
+          getGlobalActiveCapo() {
+            const track = this.tracks.find(
+              t => this.currentlyPlayingTrack === t.name + 'master' || this.currentlyPlayingTrack === t.name + 'raw'
+            );
+            return track ? track.capo || 0 : 0;
+          },
+
+          getActiveTrack() {
+            if (!this.currentlyPlayingTrack) return null;
+            return this.tracks.find(
+              t => this.currentlyPlayingTrack === t.name + 'master' || this.currentlyPlayingTrack === t.name + 'raw'
+            );
+          },
+
+          openGlobalChords() {
+            const t = this.getActiveTrack();
+            if (!t) return;
+            if (!t.chords) {
+              this.detectChords(t);
+            } else {
+              t.showChords = true;
+            }
+          },
+
+          showDeharshModal: false,
+          deharshModalTrack: null,
+          deharshLoading: false,
+          deharshStatusText: '',
+          deharshStrength: 'medium',
+
+          async openDeharshModal(track) {
+            this.deharshModalTrack = track;
+            this.showDeharshModal = true;
+            if (!track.deharshData) {
+              await this.analyzeVocalDeharsh(track);
+            } else {
+              this.deharshStrength = track.deharshData.recommendedStrength || 'medium';
+            }
+          },
+
+          async analyzeVocalDeharsh(track) {
+            const targetFile = track.masteredFile || track.fullPath;
+            if (!targetFile) return;
+            this.deharshLoading = true;
+            this.deharshStatusText = 'Scanning high-frequency vocal formants & metallic resonances (2.8 - 11 kHz)...';
+            this.log(`Scanning vocal harshness / Suno clink for ${track.name}...`, 'info');
+            try {
+              const res = await fetch('/api/deharsh-vocals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetFile, mode: 'analyze' })
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || 'Server Error');
+              track.deharshData = data;
+              this.deharshStrength = data.recommendedStrength || 'medium';
+              this.log(
+                `Vocal Harshness Score for ${track.name}: ${data.harshnessScore}/100 (${data.severity})`,
+                'success'
+              );
+            } catch (e) {
+              this.log(`Vocal De-Harsh analysis failed: ${e.message}`, 'error');
+            } finally {
+              this.deharshLoading = false;
+            }
+          },
+
+          async runVocalDeharsh(track, applyToMaster = false) {
+            const targetFile = track.masteredFile || track.fullPath;
+            if (!targetFile) return;
+            this.deharshLoading = true;
+            this.deharshStatusText = applyToMaster
+              ? `Applying '${this.deharshStrength.toUpperCase()}' Spectral De-Clink & updating Master WAV/MP3...`
+              : `Rendering '${this.deharshStrength.toUpperCase()}' Spectral De-Clink Preview...`;
+            this.log(`${this.deharshStatusText} (${track.name})`, 'info');
+            try {
+              const res = await fetch('/api/deharsh-vocals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  targetFile,
+                  mode: 'process',
+                  strength: this.deharshStrength,
+                  applyToMaster
+                })
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || 'Server Error');
+
+              track.deharshData = {
+                ...track.deharshData,
+                ...data,
+                harshnessScore: data.beforeScore
+              };
+              track.deharshPreviewFile = data.previewFile;
+              if (applyToMaster) {
+                track.deharshApplied = true;
+                this.log(
+                  `✔ Vocal De-Harsh applied to Master (${track.name}): Clink reduced by ${data.reductionPercent}%!`,
+                  'success'
+                );
+              } else {
+                this.log(
+                  `🎧 Clean Preview generated for ${track.name} (-${data.reductionPercent}% harshness). Playing preview...`,
+                  'success'
+                );
+                this.playDeharshSource('preview');
+              }
+            } catch (e) {
+              this.log(`Vocal De-Harsh processing failed: ${e.message}`, 'error');
+            } finally {
+              this.deharshLoading = false;
+            }
+          },
+
+          playDeharshSource(which) {
+            const track = this.deharshModalTrack;
+            if (!track) return;
+            const currentPos = this.audioCurrentTime || 0;
+            if (which === 'preview' && track.deharshPreviewFile) {
+              this.togglePlay('deharsh', track);
+            } else {
+              this.togglePlay(track.hasMastered ? 'master' : 'raw', track);
+            }
+            if (currentPos > 0) {
+              setTimeout(() => {
+                this.jumpToTime(currentPos);
+              }, 120);
+            }
+          },
+
+          jumpToDeharshHotspot(startTime) {
+            const track = this.deharshModalTrack;
+            if (!track) return;
+            const desiredType =
+              track.deharshPreviewFile && this.currentlyPlayingTrack === track.name + 'deharsh'
+                ? 'deharsh'
+                : track.hasMastered
+                  ? 'master'
+                  : 'raw';
+            if (this.currentlyPlayingTrack !== track.name + desiredType) {
+              this.togglePlay(desiredType, track);
+              setTimeout(() => {
+                this.jumpToTime(Math.max(0, startTime - 0.5));
+              }, 150);
+            } else {
+              this.jumpToTime(Math.max(0, startTime - 0.5));
+            }
+          },
+
+          async detectChords(track) {
+            const targetFile = track.masteredFile || track.fullPath;
+            if (!targetFile) return;
+            track.chordLoading = true;
+            this.log(`Analyzing chords for ${track.name}...`, 'info');
+            try {
+              const res = await fetch('/api/analyze-chords', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetFile })
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || 'Server Error');
+              track.chords = data.chords;
+              track.bpm = data.bpm;
+              track.capo = data.capo !== undefined ? data.capo : track.capo || 0;
+              track.showChords = true;
+
+              if (
+                this.currentlyPlayingTrack !== track.name + 'master' &&
+                this.currentlyPlayingTrack !== track.name + 'raw'
+              ) {
+                this.togglePlay(track.hasMastered ? 'master' : 'raw', track);
+              }
+
+              this.log(`Chords extracted for ${track.name}`, 'success');
+            } catch (e) {
+              this.log(`Error analyzing chords: ${e.message}`, 'error');
+            } finally {
+              track.chordLoading = false;
+            }
+          },
+
           toggleGlobalPlayback() {
             const audio = this.$refs.masterAudio;
             if (!audio || !audio.src) return;
@@ -1660,7 +2370,8 @@
           },
 
           togglePlay(type, track) {
-            const path = type === 'raw' ? track.fullPath : track.masteredFile;
+            const path =
+              type === 'raw' ? track.fullPath : type === 'deharsh' ? track.deharshPreviewFile : track.masteredFile;
             if (!path) {
               this.log(`No audio file found for ${track.name} (${type})`, 'error');
               return;
@@ -1694,8 +2405,18 @@
                 this.stopAudio();
               });
           },
+          startAnimationLoop() {
+            const loop = () => {
+              if (this.isPlaying && this.$refs.masterAudio) {
+                this.audioCurrentTime = this.$refs.masterAudio.currentTime;
+              }
+              requestAnimationFrame(loop);
+            };
+            requestAnimationFrame(loop);
+          },
 
           async init() {
+            this.startAnimationLoop();
             window.addEventListener('beforeunload', () => {
               this.stopAudio();
             });
@@ -1970,7 +2691,14 @@
                   isProcessing: null,
                   isDirect: isDirect,
                   splitSkipped: isDirect,
-                  mixSkipped: isDirect
+                  mixSkipped: isDirect,
+                  chords: prevTrack?.chords || null,
+                  chordLoading: prevTrack?.chordLoading || false,
+                  showChords: prevTrack?.showChords || false,
+                  capo: prevTrack?.capo || 0,
+                  deharshData: prevTrack?.deharshData || null,
+                  deharshPreviewFile: t.deharshPreviewFile || prevTrack?.deharshPreviewFile || null,
+                  deharshApplied: t.deharshApplied || prevTrack?.deharshApplied || false
                 };
               });
 

@@ -502,8 +502,17 @@ export function resolveAudioFiles(targetPath) {
   const files = fs
     .readdirSync(resolved)
     .filter(f => {
-      const ext = path.extname(f).toLowerCase();
-      return AUDIO_EXTENSIONS.has(ext) && !f.endsWith('_Master.wav') && !f.endsWith('_Mixed.wav');
+      const lower = f.toLowerCase();
+      const ext = path.extname(lower);
+      if (
+        lower.endsWith('_master.wav') ||
+        lower.endsWith('_mixed.wav') ||
+        lower.endsWith('.deharsh.wav') ||
+        lower.endsWith('.bak.wav')
+      ) {
+        return false;
+      }
+      return AUDIO_EXTENSIONS.has(ext);
     })
     .map(f => path.join(resolved, f));
 
